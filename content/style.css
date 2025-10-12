@@ -1,0 +1,242 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+  font-family: 'Press Start 2P', cursive;
+  background-color: #e0ffe0;
+  color: #2ecc71;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-box {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 60px;
+  background-color: #c0ffc0;
+  border: 4px solid #2ecc71;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  color: #2ecc71;
+  z-index: 1000;
+}
+
+.top-box a {
+  position: absolute;
+  right: 20px;
+  text-decoration: underline;
+  color: #2ecc71;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.top-box a:hover {
+  color: #27ae60;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  margin-top: 80px;
+  margin-bottom: 40px;
+  width: 100%;
+  height: calc(100vh - 100px);
+  box-sizing: border-box;
+  padding: 0 20px;
+  gap: 20px;
+}
+
+.left,
+.right {
+  width: 20%;
+  background-color: #f0fff0;
+  border: 4px solid #2ecc71;
+  padding: 10px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  min-height: 0;
+  position: relative;
+  border-radius: 8px;
+}
+
+.middle {
+  flex: 1;
+  background-color: #f9fff9;
+  border: 4px solid #2ecc71;
+  padding: 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: 8px;
+}
+
+h2 {
+  font-size: 1rem;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+#posts {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  padding: 5px;
+  border: 2px solid #2ecc71;
+  border-radius: 6px;
+  background-color: #f0fff0;
+}
+
+.post {
+  border-bottom: 1px solid #2ecc71;
+  margin-bottom: 5px;
+  padding-bottom: 5px;
+  text-align: left;
+  font-size: 0.8rem;
+}
+
+#postForm {
+  display: flex;
+  gap: 5px;
+}
+
+#postForm input {
+  flex: 1;
+  padding: 5px;
+  font-family: 'Press Start 2P', cursive;
+  border: 2px solid #2ecc71;
+  border-radius: 4px;
+  outline: none;
+  background-color: #f0fff0;
+  color: #2ecc71;
+}
+
+#postForm button {
+  padding: 5px 10px;
+  font-family: 'Press Start 2P', cursive;
+  background-color: #2ecc71;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+#postForm button:hover {
+  background-color: #27ae60;
+}
+
+input#friendSearch {
+  width: 94%;
+  padding: 5px;
+  margin-bottom: 5px;
+  border: 2px solid #2ecc71;
+  border-radius: 4px;
+  outline: none;
+  background-color: #f0fff0;
+  color: #2ecc71;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.7rem;
+}
+
+#searchResults, #friendsList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+#searchResults li, #friendsList li {
+  padding: 5px;
+  margin-bottom: 4px;
+  background-color: #f0fff0;
+  border: 2px solid #2ecc71;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+#searchResults li:hover, #friendsList li:hover {
+  background-color: #c0ffc0;
+  color: #27ae60;
+}
+
+#friendsList li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#friendsList button {
+  background-color: #2ecc71;
+  color: #fff;
+  border: none;
+  padding: 2px 5px;
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 0.6rem;
+}
+
+#friendsList button:hover {
+  background-color: #27ae60;
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 0.6rem;
+  color: #555;
+  background: #e0ffe0;
+  padding: 5px 0;
+  border-top: 2px solid #2ecc71;
+}
+
+.friend-request-popup {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.friend-request-popup .popup-content {
+  background: #fff;
+  padding: 20px 30px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.friend-request-popup button {
+  margin: 10px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.friend-request-popup .accept-btn {
+  background-color: #4caf50;
+  color: white;
+}
+
+.friend-request-popup .deny-btn {
+  background-color: #f44336;
+  color: white;
+}
+
+

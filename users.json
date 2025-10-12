@@ -1,0 +1,51 @@
+{
+  "test": {
+    "password": "$2b$10$nMaGv.lOw97c2e9zlWgJCeq4Zba/i3LSxz2a6UecnvPIUwyf/Saeq"
+  },
+  "dariogambelic_@": {
+    "password": "$2b$10$i5UBic38eF9WnH0uQvnoo.7OXWboyfcAaLn4IgeFDqCyFtveS3PIy"
+  },
+  "testeraccount": {
+    "password": "$2b$10$C6Ka2IfgDS5xVtF/EejELuSzVw97NmISqlZW3ZjonyL1vPt8eFzX."
+  },
+  "graeme06": {
+    "password": "$2b$10$GYHKTuIprToAPwc.tznGQu2wjFzfLOQOfqsBXCz88auPK5IOPhkBC",
+    "friends": []
+  },
+  "nikkigam": {
+    "password": "$2b$10$OvWgOcN5qDUsmhz2RIBv6u8AaHU4nwsqDdi/BQoHhYMVJIBYlVJ4q",
+    "friends": []
+  },
+  "graem": {
+    "password": "$2b$10$oTjHo4Wy.b0KnQiKYCZh/..JhRrS/eyIuj/Q8U7HO1Mz9BgcZZ9we",
+    "friends": []
+  },
+  "nikkigambelic01": {
+    "password": "$2b$10$wJGDoAha/2OwHF1A6A/oEOcKFFCII6iernlp6EgVnicQJevUxV/s2",
+    "friends": []
+  },
+  "tester": {
+    "password": "$2b$10$0VjM0z6s/dqrSHODmVUkMe9MAR8SysA.kcL5y32llGUOLTsx7byfu",
+    "friends": []
+  },
+  "graeme60": {
+    "password": "$2b$10$y6AFV1cx7SxMemSyvUp4uODsf6x89KmhEnimdnhCzeDFaByLsZecK",
+    "friends": []
+  },
+  "graeme": {
+    "password": "$2b$10$YmlI1b82.9VlEIMhVYCZcO3v6ptuhpXGzbmN8n9oLGfe0Iu/rl9UG",
+    "friends": []
+  },
+  "dariogam": {
+    "password": "$2b$10$HlPUgJA1G82mNAFfZdFNfes.1MG1mO3QqbdYjADhRh8yWN/p423la",
+    "friends": []
+  },
+  "nikkigambelic1": {
+    "password": "$2b$10$xkhzeZ8x71wCVMCP87u4aObDpCWc43IM1lbcZmBaafFEIvKPY5IFK",
+    "friends": []
+  },
+  "dariogambelic": {
+    "password": "$2b$10$bKNsawxlnyKblBh4zpWh8.tu6oKz6eZC.Dv2PG5obhn8mewngyT9S",
+    "friends": []
+  }
+}

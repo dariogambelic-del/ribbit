@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ribbit - Home</title>
+<link rel="stylesheet" href="/content/style.css">
+</head>
+<body>
+
+<div class="top-box">
+  <div>Ribbit - Chatting like the old days</div>
+  <a href="/logout">Logout</a>
+</div>
+
+<div class="main-content">
+
+  <!-- Friends List -->
+  <div class="left">
+    <h2>Friends</h2>
+    <input type="text" id="friendSearch" placeholder="Search users...">
+    <ul id="searchResults"></ul>
+    <ul id="friendsList"></ul>
+  </div>
+
+  <!-- Posts / DMs -->
+  <div class="middle">
+    <h2 id="postsHeader">Public Chat</h2>
+    <div id="posts"></div>
+    <form id="postForm">
+      <input type="text" id="postInput" placeholder="Write a message..." required>
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <!-- Settings -->
+  <div class="right">
+    <h2>Settings</h2>
+    <p>Profile</p>
+    <p>Notifications</p>
+    <p>Privacy</p>
+  </div>
+
+</div>
+
+<footer>© 2025 Ribbit</footer>
+
+<script src="/content/friends.js"></script>
+
+<script>
+let currentFriend = null;
+
+async function getUsername() {
+  try {
+    const res = await fetch('/me', { credentials:'same-origin' });
+    if (!res.ok) throw new Error('Not logged in');
+    const data = await res.json();
+    return data.username;
+  } catch {
+    window.location.href = '/index.html';
+  }
+}
+
+async function loadPosts() {
+  const postsDiv = document.getElementById('posts');
+  postsDiv.innerHTML = '';
+  let url = '/posts';
+  if (currentFriend) {
+    url = `/dm?user=${encodeURIComponent(currentFriend)}`;
+    document.getElementById('postsHeader').textContent = `DM with ${currentFriend}`;
+  } else {
+    document.getElementById('postsHeader').textContent = 'Posts';
+  }
+  const res = await fetch(url, { credentials:'same-origin' });
+  const data = await res.json();
+  data.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'post';
+    div.textContent = `${p.username}: ${p.message}`;
+    postsDiv.appendChild(div);
+  });
+  postsDiv.scrollTop = postsDiv.scrollHeight;
+}
+
+document.getElementById('postForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const message = document.getElementById('postInput').value.trim();
+  if (!message) return;
+  const body = currentFriend ? { friend: currentFriend, message } : { message };
+  await fetch(currentFriend ? '/dm' : '/posts', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    credentials:'same-origin',
+    body: JSON.stringify(body)
+  });
+  document.getElementById('postInput').value = '';
+  loadPosts();
+});
+
+(async function init() {
+  await getUsername();
+  loadPosts();
+  loadFriends(); // from friends.js
+  setInterval(loadPosts, 5000);
+  setInterval(checkFriendRequests, 5000); // check incoming requests
+})();
+</script>
+
+</body>
+</html>
+
