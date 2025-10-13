@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
+const multer = require('multer');
 
 const app = express();
 const PORT = 3000;
@@ -12,11 +13,23 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname)));
 
+// Multer setup for image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, path.join(__dirname, 'uploads')),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  }
+});
+const upload = multer({ storage });
+
+// JSON files
 const usersFile = path.join(__dirname, 'users.json');
 const postsFile = path.join(__dirname, 'posts.json');
+const dmsFile = path.join(__dirname, 'dms.json');
 
 // ----------------------------
-// JSON Helpers
+// Helpers
 // ----------------------------
 function readJSON(file) {
   if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify({}));
@@ -28,14 +41,14 @@ function writeJSON(file, data) {
 }
 
 // ----------------------------
-// ACCOUNT MANAGEMENT
+// Account routes
 // ----------------------------
 app.post('/create-account', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
   const users = readJSON(usersFile);
-  if (users[username]) return res.status(409).json({ error: 'Username already exists' });
+  if (users[username]) return res.status(409).json({ error: 'Username exists' });
 
   const hash = await bcrypt.hash(password, 10);
   users[username] = { password: hash, friends: [], pendingRequests: [] };
@@ -72,28 +85,98 @@ app.get('/me', (req, res) => {
 });
 
 // ----------------------------
-// POSTS
+// Posts
 // ----------------------------
 app.get('/posts', (req, res) => {
   const posts = fs.existsSync(postsFile) ? JSON.parse(fs.readFileSync(postsFile)) : [];
   res.json(posts);
 });
 
-app.post('/posts', (req, res) => {
+app.post('/posts', upload.single('image'), (req, res) => {
   const username = req.cookies.username;
   if (!username) return res.status(401).json({ error: 'Not logged in' });
 
   const { message } = req.body;
-  if (!message) return res.status(400).json({ error: 'Message required' });
-
   const posts = fs.existsSync(postsFile) ? JSON.parse(fs.readFileSync(postsFile)) : [];
-  posts.push({ username, message });
+  const newPost = {
+    id: Date.now().toString(),
+    username,
+    message: message || '',
+    image: req.file ? `/uploads/${req.file.filename}` : null,
+    likes: [],
+    comments: []
+  };
+  posts.push(newPost);
   writeJSON(postsFile, posts);
   res.sendStatus(200);
 });
 
 // ----------------------------
-// FRIENDS
+// DMs
+// ----------------------------
+app.get('/dm', (req, res) => {
+  const username = req.cookies.username;
+  const friend = req.query.user;
+  if (!username || !friend) return res.status(400).json({ error: 'Invalid request' });
+
+  const dms = readJSON(dmsFile);
+  const convKey = [username, friend].sort().join('_');
+  res.json(dms[convKey] || []);
+});
+
+app.post('/dm', upload.single('image'), (req, res) => {
+  const username = req.cookies.username;
+  const { message, friend } = req.body;
+  if (!username || !friend) return res.status(400).json({ error: 'Invalid request' });
+
+  const dms = readJSON(dmsFile);
+  const convKey = [username, friend].sort().join('_');
+  if (!dms[convKey]) dms[convKey] = [];
+
+  const newDM = {
+    id: Date.now().toString(),
+    username,
+    message: message || '',
+    image: req.file ? `/uploads/${req.file.filename}` : null
+  };
+  dms[convKey].push(newDM);
+  writeJSON(dmsFile, dms);
+  res.sendStatus(200);
+});
+
+// ----------------------------
+// Likes & Comments
+// ----------------------------
+app.post('/like', (req, res) => {
+  const username = req.cookies.username;
+  const { postId } = req.body;
+  if (!username || !postId) return res.status(400).json({ error: 'Invalid request' });
+
+  const posts = readJSON(postsFile);
+  const post = posts.find(p => p.id === postId);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+
+  if (!post.likes.includes(username)) post.likes.push(username);
+  writeJSON(postsFile, posts);
+  res.json({ ok: true });
+});
+
+app.post('/comment', (req, res) => {
+  const username = req.cookies.username;
+  const { postId, text } = req.body;
+  if (!username || !postId || !text) return res.status(400).json({ error: 'Invalid request' });
+
+  const posts = readJSON(postsFile);
+  const post = posts.find(p => p.id === postId);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+
+  post.comments.push({ user: username, text });
+  writeJSON(postsFile, posts);
+  res.json({ ok: true });
+});
+
+// ----------------------------
+// Friends
 // ----------------------------
 app.get('/friends', (req, res) => {
   const username = req.cookies.username;
@@ -115,7 +198,7 @@ app.delete('/friends', (req, res) => {
 });
 
 // ----------------------------
-// FRIEND REQUESTS
+// Friend requests
 // ----------------------------
 app.post('/friend-request', (req, res) => {
   const sender = req.cookies.username;
@@ -157,7 +240,7 @@ app.post('/friend-request/respond', (req, res) => {
 });
 
 // ----------------------------
-// SEARCH USERS (exact match optional in front-end)
+// Search users
 // ----------------------------
 app.get('/search-users', (req, res) => {
   const query = req.query.query?.toLowerCase() || '';
@@ -166,7 +249,6 @@ app.get('/search-users', (req, res) => {
   res.json({ users: matches });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// ----------------------------
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

@@ -2,14 +2,10 @@ const friendsList = document.getElementById('friendsList');
 const searchInput = document.getElementById('friendSearch');
 const searchResults = document.getElementById('searchResults');
 
-// ----------------------------
 // Track which popups are currently displayed
-// ----------------------------
 const activePopups = new Set();
 
-// ----------------------------
 // Popup creation for incoming requests
-// ----------------------------
 function showFriendRequestPopup(sender) {
   if (activePopups.has(sender)) return;
   activePopups.add(sender);
@@ -42,9 +38,7 @@ function showFriendRequestPopup(sender) {
   });
 }
 
-// ----------------------------
 // Respond to friend request backend call
-// ----------------------------
 async function respondToRequest(sender, accept) {
   await fetch('/friend-request/respond', {
     method: 'POST',
@@ -54,9 +48,7 @@ async function respondToRequest(sender, accept) {
   });
 }
 
-// ----------------------------
 // Load friends list
-// ----------------------------
 async function loadFriends() {
   const res = await fetch('/friends', { credentials: 'same-origin' });
   const data = await res.json();
@@ -66,9 +58,12 @@ async function loadFriends() {
     const li = document.createElement('li');
     li.textContent = f;
 
+    // Click friend to open DM
     li.addEventListener('click', () => {
       window.currentFriend = f;
-      if (window.loadPosts) window.loadPosts();
+      const postsHeader = document.getElementById('postsHeader');
+      if (postsHeader) postsHeader.textContent = `DM with ${f}`;
+      if (typeof window.loadPosts === 'function') window.loadPosts();
     });
 
     const btn = document.createElement('button');
@@ -84,7 +79,7 @@ async function loadFriends() {
       });
       if (window.currentFriend === f) window.currentFriend = null;
       loadFriends();
-      if (window.loadPosts) window.loadPosts();
+      if (typeof window.loadPosts === 'function') window.loadPosts();
     });
 
     li.appendChild(btn);
@@ -92,9 +87,7 @@ async function loadFriends() {
   });
 }
 
-// ----------------------------
 // Send friend request
-// ----------------------------
 async function sendFriendRequest(username) {
   const confirmSend = confirm(`Send friend request to ${username}?`);
   if (!confirmSend) return;
@@ -113,9 +106,7 @@ async function sendFriendRequest(username) {
   setTimeout(() => notif.remove(), 2000);
 }
 
-// ----------------------------
 // Search users (exact match)
-// ----------------------------
 searchInput.addEventListener('input', async e => {
   const query = e.target.value.trim();
   searchResults.innerHTML = '';
@@ -138,18 +129,14 @@ searchInput.addEventListener('input', async e => {
   searchResults.style.display = searchResults.childElementCount > 0 ? 'block' : 'none';
 });
 
-// ----------------------------
 // Hide search results when clicking outside
-// ----------------------------
 document.addEventListener('click', e => {
   if (!searchResults.contains(e.target) && e.target !== searchInput) {
     searchResults.style.display = 'none';
   }
 });
 
-// ----------------------------
 // Poll incoming friend requests
-// ----------------------------
 async function checkFriendRequests() {
   const res = await fetch('/friend-requests', { credentials: 'same-origin' });
   if (!res.ok) return;
@@ -160,16 +147,12 @@ async function checkFriendRequests() {
   data.requests.forEach(sender => showFriendRequestPopup(sender));
 }
 
-// ----------------------------
 // Start polling immediately on page load
-// ----------------------------
 window.addEventListener('load', () => {
   checkFriendRequests(); // immediate
   setInterval(checkFriendRequests, 3000);
 });
 
-// ----------------------------
 // Initial friends load
-// ----------------------------
 loadFriends();
 
