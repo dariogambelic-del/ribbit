@@ -8,12 +8,18 @@ const multer = require('multer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ----------------------------
+// Middleware
+// ----------------------------
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname)));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// ----------------------------
 // Multer setup for image uploads
+// ----------------------------
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, path.join(__dirname, 'uploads')),
   filename: (req, file, cb) => {
@@ -23,7 +29,9 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// ----------------------------
 // JSON files
+// ----------------------------
 const usersFile = path.join(__dirname, 'users.json');
 const postsFile = path.join(__dirname, 'posts.json');
 const dmsFile = path.join(__dirname, 'dms.json');
@@ -51,7 +59,7 @@ app.post('/create-account', async (req, res) => {
   if (users[username]) return res.status(409).json({ error: 'Username exists' });
 
   const hash = await bcrypt.hash(password, 10);
-  users[username] = { password: hash, friends: [], pendingRequests: [] };
+  users[username] = { password: hash, friends: [], pendingRequests: [], profileComplete: false };
   writeJSON(usersFile, users);
 
   res.cookie('username', username, { httpOnly: true, path: '/' });
@@ -81,7 +89,59 @@ app.get('/me', (req, res) => {
   const username = req.cookies.username;
   const users = readJSON(usersFile);
   if (!username || !users[username]) return res.status(401).json({ error: 'Not logged in' });
-  res.json({ username });
+
+  const userData = users[username];
+  res.json({ username, profileComplete: userData.profileComplete, bio: userData.bio || '', profilePic: userData.profilePic || '/uploads/default.jpg' });
+});
+
+// ----------------------------
+// Profile completion endpoint
+// ----------------------------
+app.post('/complete-profile', upload.single('profilePic'), (req, res) => {
+  const username = req.cookies.username;
+  const users = readJSON(usersFile);
+  if (!username || !users[username]) return res.status(401).json({ error: 'Not logged in' });
+
+  const { age, bio } = req.body;
+  const parsedAge = parseInt(age);
+  if (isNaN(parsedAge) || parsedAge < 18) return res.status(400).json({ error: 'Invalid age' });
+  if (!bio || bio.length > 35) return res.status(400).json({ error: 'Invalid bio' });
+
+  // Handle profile picture
+  let profilePicPath = '/uploads/default.jpg';
+  if (req.file && req.file.filename) {
+    profilePicPath = `/uploads/${req.file.filename}`;
+  } else if (!fs.existsSync(path.join(__dirname, 'uploads', 'default.jpg'))) {
+    if (fs.existsSync(path.join(__dirname, 'img', 'default.jpg'))) {
+      fs.copyFileSync(path.join(__dirname, 'img', 'default.jpg'), path.join(__dirname, 'uploads', 'default.jpg'));
+    }
+  }
+
+  users[username].age = parsedAge;
+  users[username].bio = bio;
+  users[username].profilePic = profilePicPath;
+  users[username].profileComplete = true;
+
+  writeJSON(usersFile, users);
+  res.json({ ok: true });
+});
+
+// ----------------------------
+// Edit profile (bio + picture only)
+// ----------------------------
+app.post('/edit-profile', upload.single('profilePic'), (req, res) => {
+  const username = req.cookies.username;
+  const users = readJSON(usersFile);
+  if (!username || !users[username]) return res.status(401).json({ error: 'Not logged in' });
+
+  const { bio } = req.body;
+  if (!bio || bio.length > 35) return res.status(400).json({ error: 'Invalid bio' });
+
+  users[username].bio = bio;
+  if (req.file && req.file.filename) users[username].profilePic = `/uploads/${req.file.filename}`;
+
+  writeJSON(usersFile, users);
+  res.json({ ok: true });
 });
 
 // ----------------------------
@@ -98,14 +158,18 @@ app.post('/posts', upload.single('image'), (req, res) => {
 
   const { message } = req.body;
   const posts = fs.existsSync(postsFile) ? JSON.parse(fs.readFileSync(postsFile)) : [];
+  const users = readJSON(usersFile);
+
   const newPost = {
     id: Date.now().toString(),
     username,
     message: message || '',
     image: req.file ? `/uploads/${req.file.filename}` : null,
+    profilePic: users[username].profilePic || '/uploads/default.jpg',
     likes: [],
     comments: []
   };
+
   posts.push(newPost);
   writeJSON(postsFile, posts);
   res.sendStatus(200);
@@ -130,6 +194,7 @@ app.post('/dm', upload.single('image'), (req, res) => {
   if (!username || !friend) return res.status(400).json({ error: 'Invalid request' });
 
   const dms = readJSON(dmsFile);
+  const users = readJSON(usersFile);
   const convKey = [username, friend].sort().join('_');
   if (!dms[convKey]) dms[convKey] = [];
 
@@ -137,7 +202,8 @@ app.post('/dm', upload.single('image'), (req, res) => {
     id: Date.now().toString(),
     username,
     message: message || '',
-    image: req.file ? `/uploads/${req.file.filename}` : null
+    image: req.file ? `/uploads/${req.file.filename}` : null,
+    profilePic: users[username].profilePic || '/uploads/default.jpg'
   };
   dms[convKey].push(newDM);
   writeJSON(dmsFile, dms);
@@ -176,7 +242,7 @@ app.post('/comment', (req, res) => {
 });
 
 // ----------------------------
-// Friends
+// Friends & Requests
 // ----------------------------
 app.get('/friends', (req, res) => {
   const username = req.cookies.username;
@@ -197,9 +263,6 @@ app.delete('/friends', (req, res) => {
   res.sendStatus(200);
 });
 
-// ----------------------------
-// Friend requests
-// ----------------------------
 app.post('/friend-request', (req, res) => {
   const sender = req.cookies.username;
   const { recipient } = req.body;

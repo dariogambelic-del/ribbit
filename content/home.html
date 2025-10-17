@@ -5,6 +5,125 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ribbit - Home</title>
 <link rel="stylesheet" href="/content/style.css">
+<style>
+.like-btn {
+  color: #e74c3c;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.like-btn:hover {
+  transform: scale(1.1);
+}
+.comment-input {
+  font-size: 0.75rem;
+  padding: 5px;
+  border: 1px solid #2ecc71;
+  border-radius: 4px;
+  background-color: #f0fff0;
+  width: 80%;
+}
+.comments p {
+  font-size: 0.6rem;
+  color: #2b2b2b;
+  margin: 3px 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.popup {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.popup.hidden { display: none; }
+.popup-content {
+  background: #f9fff9;
+  border: 6px solid #2ecc71;
+  border-radius: 10px;
+  width: 400px;
+  padding: 25px;
+  text-align: center;
+  color: #2ecc71;
+  font-family: 'Press Start 2P', cursive;
+}
+.popup-content input {
+  display: block;
+  width: 85%;
+  margin: 10px auto;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  border: 2px solid #2ecc71;
+  background-color: #f0fff0;
+  color: #2ecc71;
+  border-radius: 4px;
+}
+.popup-content button {
+  margin-top: 15px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 0.8rem;
+  background-color: #2ecc71;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+.popup-content button:hover { background-color: #27ae60; }
+.popup-content .error { color: red; font-size: 0.6rem; margin-top: 8px; }
+
+.post-img, .profile-img {
+  max-width: 150px;
+  max-height: 150px;
+  border-radius: 8px;
+  margin-top: 5px;
+}
+.profile-img {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.post-label {
+  font-size: 0.55rem;
+  color: #27ae60;
+  margin-bottom: 3px;
+}
+.right p {
+  cursor: pointer;
+  text-decoration: underline;
+}
+.right p:hover {
+  color: #27ae60;
+}
+
+/* Differentiate posts and DMs */
+.post.public {
+  background-color: #f9fff9;
+  border: 2px solid #2ecc71;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.post.dm {
+  background-color: #e9fbe9;
+  border: 2px dashed #2ecc71;
+  border-radius: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+</style>
 </head>
 <body>
 
@@ -14,8 +133,6 @@
 </div>
 
 <div class="main-content">
-
-  <!-- Friends List -->
   <div class="left">
     <h2>Friends</h2>
     <input type="text" id="friendSearch" placeholder="Search users...">
@@ -23,7 +140,6 @@
     <ul id="friendsList"></ul>
   </div>
 
-  <!-- Posts / DMs -->
   <div class="middle">
     <h2 id="postsHeader">Posts</h2>
     <div id="posts"></div>
@@ -36,38 +152,140 @@
     </form>
   </div>
 
-  <!-- Settings -->
   <div class="right">
     <h2>Settings</h2>
-    <p>Profile</p>
+    <p id="homeBtn">Home</p>
+    <p id="editProfileBtn">Profile</p>
     <p>Notifications</p>
     <p>Privacy</p>
   </div>
-
 </div>
 
 <footer>© 2025 Ribbit</footer>
 
-<script src="/content/friends.js"></script>
+<!-- Profile Popup -->
+<div id="profilePopup" class="popup hidden">
+  <div class="popup-content">
+    <h2 style="text-decoration: underline;">Complete Your Profile</h2><br>
+    <form id="profileForm" enctype="multipart/form-data">
+      <label>Age:</label>
+      <input type="number" id="age" name="age" min="18" required>
 
+      <label>Bio:</label>
+      <input type="text" id="bio" name="bio" maxlength="35" required>
+
+      <label>Profile Picture:</label>
+      <input type="file" id="profilePic" name="profilePic" accept="image/*">
+
+      <button type="submit">Save Profile</button>
+      <p id="profileError" class="error"></p>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Profile Popup -->
+<div id="editProfilePopup" class="popup hidden">
+  <div class="popup-content">
+    <h2>Edit Profile</h2>
+    <form id="editProfileForm" enctype="multipart/form-data">
+      <label>Bio (max 35 characters):</label>
+      <input type="text" id="editBio" name="editBio" maxlength="35" required>
+
+      <label>Profile Picture:</label>
+      <input type="file" id="editProfilePic" name="editProfilePic" accept="image/*">
+
+      <button type="submit">Save Changes</button>
+      <p id="editProfileError" class="error"></p>
+    </form>
+  </div>
+</div>
+
+<script src="/content/friends.js"></script>
 <script>
-window.currentFriend = null;  // make currentFriend global
+window.currentFriend = null;
 let currentUser = null;
 
-// Get logged-in username
 async function getUsername() {
   try {
     const res = await fetch('/me', { credentials: 'same-origin' });
     if (!res.ok) throw new Error('Not logged in');
     const data = await res.json();
     currentUser = data.username;
+
+    if (!data.profileComplete) {
+      document.getElementById('profilePopup').classList.remove('hidden');
+    }
+
     return data.username;
   } catch {
     window.location.href = '/index.html';
   }
 }
 
-// Load posts or DMs
+const ageInput = document.getElementById('age');
+const profileError = document.getElementById('profileError');
+ageInput?.addEventListener('input', () => {
+  const ageValue = parseInt(ageInput.value);
+  profileError.textContent = ageValue && ageValue < 18 ? 'You must be 18 or older' : '';
+});
+
+document.getElementById('profileForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const age = parseInt(document.getElementById('age').value);
+  const bio = document.getElementById('bio').value.trim();
+  const pic = document.getElementById('profilePic').files[0];
+
+  if (isNaN(age) || age < 18) { profileError.textContent = 'You must be 18 or older'; return; }
+  if (!bio || bio.length > 35) { profileError.textContent = 'Bio must be 1–35 characters'; return; }
+
+  const formData = new FormData();
+  formData.append('age', age);
+  formData.append('bio', bio);
+  if (pic) formData.append('profilePic', pic);
+
+  const res = await fetch('/complete-profile', { method: 'POST', credentials: 'same-origin', body: formData });
+  if (res.ok) {
+    document.getElementById('profilePopup').classList.add('hidden');
+    loadPosts();
+  } else {
+    profileError.textContent = 'Error saving profile';
+  }
+});
+
+const editBtn = document.getElementById('editProfileBtn');
+const editPopup = document.getElementById('editProfilePopup');
+const editForm = document.getElementById('editProfileForm');
+const editBioInput = document.getElementById('editBio');
+const editError = document.getElementById('editProfileError');
+
+editBtn.addEventListener('click', async () => {
+  const res = await fetch('/me', { credentials: 'same-origin' });
+  if (!res.ok) return;
+  const data = await res.json();
+  editBioInput.value = data.bio || '';
+  editPopup.classList.remove('hidden');
+});
+
+editForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  const bio = editBioInput.value.trim();
+  const pic = document.getElementById('editProfilePic').files[0];
+
+  if (!bio || bio.length > 35) { editError.textContent = 'Bio must be 1–35 characters'; return; }
+
+  const formData = new FormData();
+  formData.append('bio', bio);
+  if (pic) formData.append('profilePic', pic);
+
+  const res = await fetch('/edit-profile', { method: 'POST', credentials: 'same-origin', body: formData });
+  if (res.ok) {
+    editPopup.classList.add('hidden');
+    loadPosts();
+  } else {
+    editError.textContent = 'Error saving profile';
+  }
+});
+
 async function loadPosts() {
   const postsDiv = document.getElementById('posts');
   postsDiv.innerHTML = '';
@@ -85,47 +303,48 @@ async function loadPosts() {
 
   data.forEach(p => {
     const post = document.createElement('div');
-    post.className = 'post';
-    
-    if (window.currentFriend) {
-      // DM posts: message + optional image
-      post.innerHTML = `<strong>${p.username}</strong><br>
-                        ${p.message || ''}
-                        ${p.image ? `<br><img src="${p.image}" class="post-img">` : ''}`;
-    } else {
-      // Public posts: message + image + likes/comments
-      post.innerHTML = `
-        <strong>${p.username}</strong><br>
-        ${p.message || ''}
-        ${p.image ? `<br><img src="${p.image}" class="post-img">` : ''}
-        <div class="actions">
-          <button class="like-btn" data-id="${p.id}">❤️ ${p.likes?.length || 0}</button>
-          <button class="comment-toggle" data-id="${p.id}">💬 Comment</button>
+    post.className = window.currentFriend ? 'post dm' : 'post public';
+
+    const profileImg = p.profilePic || '/img/default.jpg';
+    post.innerHTML = `
+      <div class="post-label">${window.currentFriend ? 'Direct Message' : 'Public Post'}</div>
+      <div class="post-header">
+        <div style="display: flex; align-items: center;">
+          <img src="${profileImg}" class="profile-img">
+          <strong>${p.username}</strong>
         </div>
-        <div class="comments" id="comments-${p.id}">
-          ${(p.comments || []).map(c => `<p><b>${c.user}:</b> ${c.text}</p>`).join('')}
-          <input type="text" placeholder="Write a comment..." class="comment-input" data-id="${p.id}">
-        </div>
-      `;
-    }
+        <button class="like-btn" data-id="${p.id}" style="border:none; background:none; cursor:pointer; font-size:1rem;">
+          ❤️ ${p.likes?.length || 0}
+        </button>
+      </div>
+      <div class="post-content">${p.message || ''}</div>
+      ${p.image ? `<br><img src="${p.image}" class="post-img">` : ''}
+      ${
+        !window.currentFriend
+          ? `<div class="comments" id="comments-${p.id}">
+              ${(p.comments || []).map(c => `<p><b>${c.user}:</b> ${c.text}</p>`).join('')}
+              <input type="text" placeholder="Write a comment..." class="comment-input" data-id="${p.id}">
+            </div>`
+          : ''
+      }`;
+
     postsDiv.appendChild(post);
   });
 
-  // Only add likes/comments for public posts
-  if (!window.currentFriend) {
-    document.querySelectorAll('.like-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const postId = btn.dataset.id;
-        await fetch('/like', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ postId })
-        });
-        loadPosts();
+  document.querySelectorAll('.like-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postId = btn.dataset.id;
+      await fetch('/like', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ postId })
       });
+      loadPosts();
     });
+  });
 
+  if (!window.currentFriend) {
     document.querySelectorAll('.comment-input').forEach(input => {
       input.addEventListener('keypress', async e => {
         if (e.key === 'Enter') {
@@ -133,10 +352,10 @@ async function loadPosts() {
           if (!text) return;
           const postId = e.target.dataset.id;
           await fetch('/comment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify({ postId, text })
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            credentials:'same-origin',
+            body:JSON.stringify({ postId, text })
           });
           e.target.value = '';
           loadPosts();
@@ -148,13 +367,10 @@ async function loadPosts() {
   postsDiv.scrollTop = postsDiv.scrollHeight;
 }
 
-// Handle new posts / DMs
 document.getElementById('postForm').addEventListener('submit', async e => {
   e.preventDefault();
-
   const message = document.getElementById('postInput').value.trim();
   const imageFile = document.getElementById('postImage').files[0];
-
   if (!message && !imageFile) return;
 
   const formData = new FormData();
@@ -163,22 +379,21 @@ document.getElementById('postForm').addEventListener('submit', async e => {
   if (window.currentFriend) formData.append('friend', window.currentFriend);
 
   const endpoint = window.currentFriend ? '/dm' : '/posts';
-
-  await fetch(endpoint, {
-    method: 'POST',
-    credentials: 'same-origin',
-    body: formData
-  });
-
+  await fetch(endpoint, { method:'POST', credentials:'same-origin', body: formData });
   document.getElementById('postForm').reset();
   loadPosts();
 });
 
-// Initialize
+document.getElementById('homeBtn').addEventListener('click', () => {
+  window.currentFriend = null;
+  loadPosts();
+  document.getElementById('postsHeader').textContent = 'Posts';
+});
+
 (async function init() {
   await getUsername();
   loadPosts();
-  loadFriends(); // from friends.js
+  loadFriends();
   setInterval(loadPosts, 5000);
   setInterval(checkFriendRequests, 5000);
 })();

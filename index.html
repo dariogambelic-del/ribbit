@@ -18,8 +18,38 @@ body {
   min-height: 100vh;
   text-align: center;
 }
+
+/* New container to align image and login content side-by-side */
+.main-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+
+/* Frog image styling */
+.frog-image {
+  width: 250px;
+  height: auto;
+  border: 8px solid #2ecc71;
+  background-color: #f9fff9;
+  padding: 5px;
+  margin-top: 12%;
+  object-fit: cover;
+}
+
+/* Right side content (title, tagline, box) */
+.right-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Title and tagline */
 h1 { color: #2ecc71; font-size: 2rem; margin-bottom: 10px; letter-spacing: 1px; }
 p { font-size: 0.8rem; color: #333; margin-bottom: 20px; }
+
+/* Login box */
 .border-box {
   width: 600px;
   height: 250px;
@@ -33,6 +63,7 @@ p { font-size: 0.8rem; color: #333; margin-bottom: 20px; }
   padding: 20px;
   box-sizing: border-box;
 }
+
 .login-form { display: flex; flex-direction: column; width: 60%; }
 .login-form input {
   margin: 10px 0;
@@ -57,6 +88,7 @@ p { font-size: 0.8rem; color: #333; margin-bottom: 20px; }
   transition: background 0.3s;
 }
 .login-form button:hover { background-color: #27ae60; }
+
 .create-account {
   margin-top: 15px;
   font-size: 0.6rem;
@@ -66,7 +98,10 @@ p { font-size: 0.8rem; color: #333; margin-bottom: 20px; }
   transition: color 0.3s;
 }
 .create-account:hover { color: #27ae60; }
+
 .error-message { font-size: 0.6rem; color: red; margin-top: 10px; display: none; }
+
+/* Footer */
 footer {
   position: fixed;
   bottom: 0;
@@ -83,17 +118,25 @@ footer {
 </head>
 <body>
 
-<h1>Ribbit</h1>
-<p>Chatting like the old days.</p>
+<div class="main-container">
+  <!-- Left: Frog logo -->
+  <img src="/img/login-logo.jpg" alt="Ribbit Frog Logo" class="frog-image">
 
-<div class="border-box">
-  <form class="login-form" id="loginForm">
-    <input type="text" id="username" placeholder="Username" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <button type="submit">Login</button>
-    <div class="error-message" id="errorMessage"></div>
-    <div class="create-account" onclick="window.location.href='create.html'">Create Account</div>
-  </form>
+  <!-- Right: Existing content -->
+  <div class="right-content">
+    <h1>Ribbit</h1>
+    <p>Chatting like the old days.</p>
+
+    <div class="border-box">
+      <form class="login-form" id="loginForm">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+        <div class="error-message" id="errorMessage"></div>
+        <div class="create-account" onclick="window.location.href='create.html'">Create Account</div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <footer>© 2025 Ribbit</footer>

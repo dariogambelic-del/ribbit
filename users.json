@@ -1,16 +1,1 @@
-{
-  "dariogambelic_": {
-    "password": "$2b$10$dlFIeETfWsWyHmWSBS6qhOV.29651tA/0GPHcAIwMCQJMSLzDm7Ae",
-    "friends": [
-      "nikkigam"
-    ],
-    "pendingRequests": []
-  },
-  "nikkigam": {
-    "password": "$2b$10$RKq7E0mOcJKQ5was85nV.O46Sk8qn9yMmZzlCGjAwtMr/fFQVDtiW",
-    "friends": [
-      "dariogambelic_"
-    ],
-    "pendingRequests": []
-  }
-}
+{}
