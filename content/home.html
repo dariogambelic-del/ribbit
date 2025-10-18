@@ -6,6 +6,10 @@
 <title>Ribbit - Home</title>
 <link rel="stylesheet" href="/content/style.css">
 <style>
+/* Fonts */
+
+
+/* Buttons */
 .like-btn {
   color: #e74c3c;
   font-size: 1rem;
@@ -14,6 +18,8 @@
 .like-btn:hover {
   transform: scale(1.1);
 }
+
+/* Comment input */
 .comment-input {
   margin-top: 6px;
   font-size: 0.75rem;
@@ -23,6 +29,8 @@
   background-color: #f0fff0;
   width: 30%;
 }
+
+/* Comments */
 .comments p {
   font-size: 0.7rem;
   color: #2b2b2b;
@@ -30,8 +38,11 @@
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
+
+/* Popups */
 .popup {
   position: fixed;
+  font-family: 'Silkscreen', sans-serif;
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0, 0, 0, 0.6);
   display: flex;
@@ -46,10 +57,12 @@
   width: 400px;
   padding: 25px;
   text-align: center;
-  color: #2ecc71;
-  font-family: 'Press Start 2P', cursive;
+  color: green;
+  font-family: 'Silkscreen', sans-serif;
 }
-.popup-content input {
+.popup-content input[type="text"], 
+.popup-content input[type="number"], 
+.popup-content input[type="file"] {
   display: block;
   width: 85%;
   margin: 10px auto;
@@ -58,7 +71,7 @@
   font-size: 0.7rem;
   border: 2px solid green;
   background-color: #f0fff0;
-  color: #2ecc71;
+  color: green;
 }
 .popup-content button {
   margin-top: 15px;
@@ -73,6 +86,7 @@
 .popup-content button:hover { background-color: #27ae60; }
 .popup-content .error { color: red; font-size: 0.6rem; margin-top: 8px; }
 
+/* Post & Profile images */
 .post-img, .profile-img {
   max-width: 150px;
   max-height: 150px;
@@ -84,6 +98,8 @@
   margin-right: 8px;
   vertical-align: middle;
 }
+
+/* Post header */
 .post-header {
   display: flex;
   align-items: center;
@@ -94,6 +110,8 @@
   color: #27ae60;
   margin-bottom: 3px;
 }
+
+/* Right nav */
 .right p {
   cursor: pointer;
   text-decoration: underline;
@@ -102,7 +120,7 @@
   color: #27ae60;
 }
 
-/* Differentiate posts and DMs */
+/* Posts & DMs */
 .post.public {
   background-color: #f9fff9;
   border: 2px solid #2ecc71;
@@ -111,8 +129,6 @@
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
-
-/* DMs: chat bubble style */
 .post.dm {
   border: 2px solid #2ecc71;
   padding: 8px;
@@ -156,7 +172,7 @@
     <div id="posts" class="dm-container"></div>
 
     <form id="postForm" class="post-form-inline" enctype="multipart/form-data">
-      <input type="text" id="postInput" placeholder="Write a message..." required>
+      <input type="text" id="postInput" placeholder="Write a message..." required style="font-family: 'Fredoka', sans-serif;">
       <input type="file" id="postImage" accept="image/*" style="display:none;">
       <label for="postImage" class="image-icon">📷</label>
       <button type="submit">Send</button>
@@ -167,8 +183,12 @@
     <h2>Navigate</h2>
     <p id="homeBtn">Home</p>
     <p id="editProfileBtn">Profile</p>
-    <p>Notifications</p>
+    <p id="notificationsBtn">Notifications</p>
     <p>Privacy</p>
+  </div>
+
+  <div class="right-far">
+    <img id="currentUserPic" src="/img/default.jpg" />
   </div>
 </div>
 
@@ -211,10 +231,60 @@
   </div>
 </div>
 
+<!-- Notifications Popup -->
+<div id="notificationsPopup" class="popup hidden">
+  <div class="popup-content">
+    <h2 style="text-decoration: underline;">Notification Settings</h2><br>
+    <form id="notificationsForm">
+      <label>
+        <input type="checkbox" name="emailMessages">
+        Receive emails from Ribbit when you receive a message?
+      </label><br><br>
+
+      <label>
+        <input type="checkbox" name="likeNotifications">
+        Receive notifications when a user likes your post?
+      </label><br><br>
+
+      <label>
+        <input type="checkbox" name="friendPostNotifications">
+        Receive notifications when your friend uploads a post?
+      </label><br><br>
+
+      <label>
+        <input type="checkbox" name="commentNotifications">
+        Receive notifications when someone comments on your post?
+      </label><br><br>
+
+      <button type="submit">Save Settings</button>
+      <p id="notificationsError" class="error"></p>
+    </form>
+  </div>
+</div>
+
 <script src="/content/friends.js"></script>
 <script>
 window.currentFriend = null;
 let currentUser = null;
+let currentUserBio = null;
+
+// Bottom-right container for username + bio
+const userInfoContainer = document.createElement('div');
+userInfoContainer.id = 'userInfoContainer';
+userInfoContainer.style.position = 'fixed';
+userInfoContainer.style.bottom = '41px';
+userInfoContainer.style.right = '20px';
+userInfoContainer.style.backgroundColor = '#f0fff0';
+userInfoContainer.style.border = '4px solid green';
+userInfoContainer.style.padding = '10px';
+userInfoContainer.style.fontFamily = "'Silkscreen', sans-serif";
+userInfoContainer.style.fontSize = '1rem';
+userInfoContainer.style.wordWrap = 'break-word';
+userInfoContainer.style.color = 'green';
+userInfoContainer.style.height = '35%';
+userInfoContainer.style.width = '34%';
+userInfoContainer.style.boxShadow = '0px 2px 5px rgba(0,0,0,0.2)';
+document.body.appendChild(userInfoContainer);
 
 async function getUsername() {
   try {
@@ -222,6 +292,10 @@ async function getUsername() {
     if (!res.ok) throw new Error('Not logged in');
     const data = await res.json();
     currentUser = data.username;
+    currentUserBio = data.bio || '';
+
+    document.getElementById('currentUserPic').src = data.profilePic || '/img/default.jpg';
+    userInfoContainer.innerHTML = `<strong>Username: ${currentUser}</strong><br>Bio: ${currentUserBio}`;
 
     if (!data.profileComplete) {
       document.getElementById('profilePopup').classList.remove('hidden');
@@ -233,6 +307,7 @@ async function getUsername() {
   }
 }
 
+// Profile form
 const ageInput = document.getElementById('age');
 const profileError = document.getElementById('profileError');
 ageInput?.addEventListener('input', () => {
@@ -258,11 +333,18 @@ document.getElementById('profileForm').addEventListener('submit', async e => {
   if (res.ok) {
     document.getElementById('profilePopup').classList.add('hidden');
     loadPosts();
+
+    const meRes = await fetch('/me', { credentials: 'same-origin' });
+    const meData = await meRes.json();
+    document.getElementById('currentUserPic').src = meData.profilePic || '/img/default.jpg';
+    currentUserBio = meData.bio || '';
+    userInfoContainer.innerHTML = `<strong>Username: ${currentUser}</strong><br>Bio: ${currentUserBio}`;
   } else {
     profileError.textContent = 'Error saving profile';
   }
 });
 
+// Edit profile
 const editBtn = document.getElementById('editProfileBtn');
 const editPopup = document.getElementById('editProfilePopup');
 const editForm = document.getElementById('editProfileForm');
@@ -292,11 +374,33 @@ editForm.addEventListener('submit', async e => {
   if (res.ok) {
     editPopup.classList.add('hidden');
     loadPosts();
+
+    const meRes = await fetch('/me', { credentials: 'same-origin' });
+    const meData = await meRes.json();
+    document.getElementById('currentUserPic').src = meData.profilePic || '/img/default.jpg';
+    currentUserBio = meData.bio || '';
+    userInfoContainer.innerHTML = `<strong>Username: ${currentUser}</strong><br>Bio: ${currentUserBio}`;
   } else {
     editError.textContent = 'Error saving profile';
   }
 });
 
+// Notifications popup
+const notificationsBtn = document.getElementById('notificationsBtn');
+const notificationsPopup = document.getElementById('notificationsPopup');
+const notificationsForm = document.getElementById('notificationsForm');
+
+notificationsBtn.addEventListener('click', () => {
+  notificationsPopup.classList.remove('hidden');
+});
+
+notificationsForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  // Here you can handle saving notification preferences
+  notificationsPopup.classList.add('hidden');
+});
+
+// Posts
 async function loadPosts() {
   const postsDiv = document.getElementById('posts');
   postsDiv.innerHTML = '';
@@ -314,8 +418,6 @@ async function loadPosts() {
 
   data.forEach(p => {
     const post = document.createElement('div');
-
-    // Differentiate DM alignment
     if (window.currentFriend) {
       post.className = `post dm ${p.username === currentUser ? 'dm-right' : 'dm-left'}`;
     } else {
@@ -347,7 +449,6 @@ async function loadPosts() {
             </div>`
           : ''
       }`;
-
     postsDiv.appendChild(post);
   });
 
