@@ -1,34 +1,31 @@
 const friendsList = document.getElementById('friendsList');
 const searchInput = document.getElementById('friendSearch');
 const searchResults = document.getElementById('searchResults');
-
-// Track which popups are currently displayed
 const activePopups = new Set();
+const sound = new Audio('/content/sounds/sound.mp3');
+const unreadMessages = new Set();
 
-// Popup creation for incoming requests
 function showFriendRequestPopup(sender) {
   if (activePopups.has(sender)) return;
   activePopups.add(sender);
+  sound.play();
 
   const overlay = document.createElement('div');
   overlay.id = `friend-request-${sender}`;
   overlay.className = 'friend-request-popup';
-
   overlay.innerHTML = `
-    <div class="popup-content">
+    <div class="popup-content" style="background-color: #f0fff0; border-color: green;">
       <p>${sender} sent you a friend request</p>
-      <button class="accept-btn">Accept</button>
-      <button class="deny-btn">Deny</button>
+      <button class="accept-btn" style="background-color: #2ecc71; color: white;">Accept</button>
+      <button class="deny-btn" style="background-color: #e74c3c; color: white;">Deny</button>
     </div>
   `;
-
   document.body.appendChild(overlay);
 
   overlay.querySelector('.accept-btn').addEventListener('click', async () => {
     await respondToRequest(sender, true);
     overlay.remove();
     activePopups.delete(sender);
-    loadFriends();
   });
 
   overlay.querySelector('.deny-btn').addEventListener('click', async () => {
@@ -38,7 +35,6 @@ function showFriendRequestPopup(sender) {
   });
 }
 
-// Respond to friend request backend call
 async function respondToRequest(sender, accept) {
   await fetch('/friend-request/respond', {
     method: 'POST',
@@ -48,65 +44,135 @@ async function respondToRequest(sender, accept) {
   });
 }
 
-// Load friends list
 async function loadFriends() {
   const res = await fetch('/friends', { credentials: 'same-origin' });
   const data = await res.json();
   friendsList.innerHTML = '';
 
-  data.friends.forEach(f => {
+  const friendCount = document.getElementById('friendCount');
+  friendCount.textContent = `(${data.friends.length})`;
+
+  for (let f of data.friends) {
+    const username = typeof f === 'string' ? f : f.username;
+    const profilePic = f.profilePic && f.profilePic.trim() !== '' ? f.profilePic : '/img/default.jpg';
+
     const li = document.createElement('li');
-    li.textContent = f;
+    li.style.display = 'flex';
+    li.style.alignItems = 'center';
+    li.style.justifyContent = 'space-between';
+    li.style.position = 'relative';
 
-    // Click friend to open DM
-    li.addEventListener('click', () => {
-      window.currentFriend = f;
+    const friendInfo = document.createElement('div');
+    friendInfo.style.display = 'flex';
+    friendInfo.style.alignItems = 'center';
+    friendInfo.style.cursor = 'pointer';
+
+    const img = document.createElement('img');
+    img.src = profilePic;
+    img.alt = username;
+    img.className = 'friend-avatar';
+    img.style.width = '25px';
+    img.style.height = '25px';
+    img.style.borderRadius = '50%';
+    img.style.marginRight = '8px';
+
+    const span = document.createElement('span');
+    span.textContent = username;
+
+    friendInfo.appendChild(img);
+    friendInfo.appendChild(span);
+    li.appendChild(friendInfo);
+
+    if (unreadMessages.has(username)) {
+      const notifSquare = document.createElement('div');
+      notifSquare.className = 'message-notif';
+      notifSquare.style.width = '8px';
+      notifSquare.style.height = '8px';
+      notifSquare.style.backgroundColor = 'red';
+      notifSquare.style.borderRadius = '2px';
+      notifSquare.style.marginLeft = '6px';
+      li.appendChild(notifSquare);
+    }
+
+    friendInfo.addEventListener('click', async () => {
+      window.currentFriend = username;
+
       const postsHeader = document.getElementById('postsHeader');
-      if (postsHeader) postsHeader.textContent = `DM with ${f}`;
-      if (typeof window.loadPosts === 'function') window.loadPosts();
-    });
+      postsHeader.textContent = `DM with ${username}`;
 
-    const btn = document.createElement('button');
-    btn.textContent = 'Remove';
-    btn.style.marginLeft = '10px';
-    btn.addEventListener('click', async e => {
-      e.stopPropagation();
-      await fetch('/friends', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ friend: f })
+      unreadMessages.delete(username);
+      const existingSquare = li.querySelector('.message-notif');
+      if (existingSquare) existingSquare.remove();
+
+      const existingBtn = document.querySelector('.friend-remove-btn');
+      if (existingBtn) existingBtn.remove();
+
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = 'Remove';
+      removeBtn.className = 'remove-btn friend-remove-btn';
+      removeBtn.style.marginLeft = '5px';
+      removeBtn.style.fontSize = '0.6rem';
+
+      removeBtn.addEventListener('click', async e => {
+        e.stopPropagation();
+        await fetch('/friends', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ friend: username })
+        });
+        window.currentFriend = null;
+        removeBtn.remove();
+        loadFriends();
+        if (typeof window.loadPosts === 'function') window.loadPosts();
+        if (typeof window.updateUserInfoContainerWithData === 'function')
+          window.updateUserInfoContainerWithData({});
       });
-      if (window.currentFriend === f) window.currentFriend = null;
-      loadFriends();
+
+      postsHeader.appendChild(removeBtn);
+
       if (typeof window.loadPosts === 'function') window.loadPosts();
+      updateUserInfo(username);
     });
 
-    li.appendChild(btn);
     friendsList.appendChild(li);
-  });
+  }
 }
 
-// Send friend request
 async function sendFriendRequest(username) {
-  const confirmSend = confirm(`Send friend request to ${username}?`);
-  if (!confirmSend) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'popup';
+  overlay.innerHTML = `
+    <div class="popup-content" style="background-color: #f0fff0; border-color: green;">
+      <p>Send friend request to ${username}?</p>
+      <button id="confirmSend" style="background-color: #2ecc71; color: white;">Yes</button>
+      <button id="cancelSend" style="background-color: #e74c3c; color: white;">No</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
 
-  await fetch('/friend-request', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
-    body: JSON.stringify({ recipient: username })
+  overlay.querySelector('#confirmSend').addEventListener('click', async () => {
+    sound.play();
+    await fetch('/friend-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ recipient: username })
+    });
+    overlay.remove();
+
+    const notif = document.createElement('div');
+    notif.className = 'sent-notification';
+    notif.textContent = `Friend request sent to ${username}`;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 2000);
   });
 
-  const notif = document.createElement('div');
-  notif.className = 'sent-notification';
-  notif.textContent = `Friend request sent to ${username}`;
-  document.body.appendChild(notif);
-  setTimeout(() => notif.remove(), 2000);
+  overlay.querySelector('#cancelSend').addEventListener('click', () => {
+    overlay.remove();
+  });
 }
 
-// Search users (exact match)
 searchInput.addEventListener('input', async e => {
   const query = e.target.value.trim();
   searchResults.innerHTML = '';
@@ -118,41 +184,81 @@ searchInput.addEventListener('input', async e => {
   const res = await fetch(`/search-users?query=${encodeURIComponent(query)}`, { credentials: 'same-origin' });
   const data = await res.json();
 
-  data.users.forEach(u => {
-    if (u !== query) return; // exact match only
+  for (let username of data.users) {
+    if (username !== query) continue;
+
+    let profilePic = '/img/default.jpg';
+    try {
+      const userRes = await fetch(`/user/${username}`, { credentials: 'same-origin' });
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        profilePic = userData.profilePic || profilePic;
+      }
+    } catch {}
+
     const li = document.createElement('li');
-    li.textContent = u;
-    li.addEventListener('click', () => sendFriendRequest(u));
+    li.style.display = 'flex';
+    li.style.alignItems = 'center';
+    li.style.justifyContent = 'space-between';
+    li.style.cursor = 'pointer';
+    li.style.padding = '4px 4px';
+
+    const friendInfo = document.createElement('div');
+    friendInfo.style.display = 'flex';
+    friendInfo.style.alignItems = 'center';
+
+    const img = document.createElement('img');
+    img.src = profilePic;
+    img.alt = username;
+    img.className = 'friend-avatar';
+    img.style.width = '25px';
+    img.style.height = '25px';
+    img.style.borderRadius = '50%';
+    img.style.marginRight = '8px';
+
+    const span = document.createElement('span');
+    span.textContent = username;
+
+    friendInfo.appendChild(img);
+    friendInfo.appendChild(span);
+    li.appendChild(friendInfo);
+
+    li.addEventListener('click', () => sendFriendRequest(username));
     searchResults.appendChild(li);
-  });
+  }
 
   searchResults.style.display = searchResults.childElementCount > 0 ? 'block' : 'none';
 });
 
-// Hide search results when clicking outside
 document.addEventListener('click', e => {
-  if (!searchResults.contains(e.target) && e.target !== searchInput) {
-    searchResults.style.display = 'none';
-  }
+  if (!searchResults.contains(e.target) && e.target !== searchInput) searchResults.style.display = 'none';
 });
 
-// Poll incoming friend requests
 async function checkFriendRequests() {
   const res = await fetch('/friend-requests', { credentials: 'same-origin' });
   if (!res.ok) return;
-
   const data = await res.json();
   if (!data.requests) return;
-
   data.requests.forEach(sender => showFriendRequestPopup(sender));
 }
 
-// Start polling immediately on page load
-window.addEventListener('load', () => {
-  checkFriendRequests(); // immediate
-  setInterval(checkFriendRequests, 3000);
-});
+async function updateUserInfo(username) {
+  const res = await fetch(`/user/${username}`, { credentials: 'same-origin' });
+  if (!res.ok) return;
+  const data = await res.json();
+  if (typeof window.updateUserInfoContainerWithData === 'function') {
+    window.updateUserInfoContainerWithData(data);
+  }
+}
 
-// Initial friends load
-loadFriends();
+function markUnread(username) {
+  unreadMessages.add(username);
+  loadFriends();
+}
+
+window.addEventListener('load', () => {
+  checkFriendRequests();
+  setInterval(checkFriendRequests, 3000);
+  loadFriends();
+});
 

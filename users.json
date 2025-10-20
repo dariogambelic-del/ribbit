@@ -1,11 +1,35 @@
 {
-  "dariogambelic_@": {
-    "password": "$2b$10$EsWVFZ0xawFhnzHI68yXzeBUc8Rlpkg8uSdAYZoAUm273s5KRk2Si",
-    "friends": [],
+  "dariogambelic": {
+    "password": "$2b$10$Lbyj65IwrtlC/G3rt.eGRemGG//sm0kgqy6p9FQa2LcWrm3fPdDvO",
+    "friends": [
+      "dariogambelic",
+      "nikkigam"
+    ],
     "pendingRequests": [],
     "profileComplete": true,
-    "age": 19,
-    "bio": "i just bipped right on the highway",
-    "profilePic": "/uploads/default.jpg"
+    "age": 103,
+    "dob": "09/11/1922",
+    "relationshipStatus": "Single",
+    "createdAt": "2025-10-20T18:16:39.820Z",
+    "bio": "just bipped right on the highway",
+    "profilePic": "/uploads/1760984523258-egr4lnnkb9.gif",
+    "lastLoggedIn": "October 20, 2025",
+    "isOnline": true
+  },
+  "nikkigam": {
+    "password": "$2b$10$HY91Q.xT9btmM/yFlOEdQOBxjxx7remBKY.ZRZJ2elLr4yn9nazT6",
+    "friends": [
+      "dariogambelic"
+    ],
+    "pendingRequests": [],
+    "profileComplete": true,
+    "age": 22,
+    "dob": "09/11/2003",
+    "relationshipStatus": "",
+    "createdAt": "2025-10-20T18:24:42.027Z",
+    "bio": "test",
+    "profilePic": "/uploads/default.jpg",
+    "isOnline": false,
+    "lastLoggedIn": "October 20, 2025"
   }
 }

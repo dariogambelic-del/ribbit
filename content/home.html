@@ -6,10 +6,6 @@
 <title>Ribbit - Home</title>
 <link rel="stylesheet" href="/content/style.css">
 <style>
-/* Fonts */
-
-
-/* Buttons */
 .like-btn {
   color: #e74c3c;
   font-size: 1rem;
@@ -19,7 +15,6 @@
   transform: scale(1.1);
 }
 
-/* Comment input */
 .comment-input {
   margin-top: 6px;
   font-size: 0.75rem;
@@ -30,7 +25,6 @@
   width: 30%;
 }
 
-/* Comments */
 .comments p {
   font-size: 0.7rem;
   color: #2b2b2b;
@@ -39,7 +33,6 @@
   overflow-wrap: break-word;
 }
 
-/* Popups */
 .popup {
   position: fixed;
   font-family: 'Silkscreen', sans-serif;
@@ -62,7 +55,8 @@
 }
 .popup-content input[type="text"], 
 .popup-content input[type="number"], 
-.popup-content input[type="file"] {
+.popup-content input[type="file"], 
+.popup-content select {
   display: block;
   width: 85%;
   margin: 10px auto;
@@ -86,7 +80,6 @@
 .popup-content button:hover { background-color: #27ae60; }
 .popup-content .error { color: red; font-size: 0.6rem; margin-top: 8px; }
 
-/* Post & Profile images */
 .post-img, .profile-img {
   max-width: 150px;
   max-height: 150px;
@@ -120,7 +113,6 @@
   color: #27ae60;
 }
 
-/* Posts & DMs */
 .post.public {
   background-color: #f9fff9;
   border: 2px solid #2ecc71;
@@ -155,20 +147,20 @@
 <body>
 
 <div class="top-box">
-  <div>Ribbit - Chatting like the old days</div>
+  <p class="header">Ribbit - Chatting like the old days</p>
   <a href="/logout">Logout</a>
 </div>
 
 <div class="main-content">
   <div class="left">
-    <h2>Friends</h2>
+    <h2>Friends <span id="friendCount">(0)</span></h2>
     <input type="text" id="friendSearch" placeholder="Search users...">
     <ul id="searchResults"></ul>
     <ul id="friendsList"></ul>
   </div>
 
   <div class="middle">
-    <h2 id="postsHeader">Posts</h2>
+    <h2 id="postsHeader">Recent Posts</h2>
     <div id="posts" class="dm-container"></div>
 
     <form id="postForm" class="post-form-inline" enctype="multipart/form-data">
@@ -181,11 +173,13 @@
 
   <div class="right">
     <h2>Navigate</h2>
-    <p id="homeBtn">Home</p>
-    <p id="editProfileBtn">Profile</p>
-    <p id="notificationsBtn">Notifications</p>
-    <p>Privacy</p>
+    <p id="homeBtn" style="font-size: 0.83rem;">Home</p>
+    <p id="exploreBtn" style="font-size: 0.83rem;">Explore</p>
+    <p id="editProfileBtn" style="font-size: 0.83rem;">Profile</p>
+    <p id="notificationsBtn" style="font-size: 0.83rem;">Notifications</p>
+    <p id="PrivacyBtn" style="font-size: 0.83rem;">Privacy</p>
   </div>
+
 
   <div class="right-far">
     <img id="currentUserPic" src="/img/default.jpg" />
@@ -194,13 +188,12 @@
 
 <footer>© 2025 Ribbit</footer>
 
-<!-- Profile Popup -->
 <div id="profilePopup" class="popup hidden">
   <div class="popup-content">
     <h2 style="text-decoration: underline;">Complete Your Profile</h2><br>
     <form id="profileForm" enctype="multipart/form-data">
-      <label>Age:</label>
-      <input type="number" id="age" name="age" min="18" required>
+      <label>Date Of Birth (MM/DD/YYYY):</label>
+      <input type="text" id="dob" name="dob" placeholder="MM/DD/YYYY" required>
 
       <label>Bio:</label>
       <input type="text" id="bio" name="bio" maxlength="35" required>
@@ -224,6 +217,14 @@
 
       <label>Profile Picture:</label>
       <input type="file" id="editProfilePic" name="editProfilePic" accept="image/*">
+
+      <label>Relationship Status:</label>
+      <select id="editRelationshipStatus" name="relationshipStatus">
+        <option value="">Select</option>
+        <option value="Single">Single</option>
+        <option value="Relationship">Relationship</option>
+        <option value="Married">Married</option>
+      </select>
 
       <button type="submit">Save Changes</button>
       <p id="editProfileError" class="error"></p>
@@ -263,263 +264,7 @@
 </div>
 
 <script src="/content/friends.js"></script>
-<script>
-window.currentFriend = null;
-let currentUser = null;
-let currentUserBio = null;
-
-// Bottom-right container for username + bio
-const userInfoContainer = document.createElement('div');
-userInfoContainer.id = 'userInfoContainer';
-userInfoContainer.style.position = 'fixed';
-userInfoContainer.style.bottom = '41px';
-userInfoContainer.style.right = '20px';
-userInfoContainer.style.backgroundColor = '#f0fff0';
-userInfoContainer.style.border = '4px solid green';
-userInfoContainer.style.padding = '10px';
-userInfoContainer.style.fontFamily = "'Silkscreen', sans-serif";
-userInfoContainer.style.fontSize = '1rem';
-userInfoContainer.style.wordWrap = 'break-word';
-userInfoContainer.style.color = 'green';
-userInfoContainer.style.height = '35%';
-userInfoContainer.style.width = '34%';
-userInfoContainer.style.boxShadow = '0px 2px 5px rgba(0,0,0,0.2)';
-document.body.appendChild(userInfoContainer);
-
-async function getUsername() {
-  try {
-    const res = await fetch('/me', { credentials: 'same-origin' });
-    if (!res.ok) throw new Error('Not logged in');
-    const data = await res.json();
-    currentUser = data.username;
-    currentUserBio = data.bio || '';
-
-    document.getElementById('currentUserPic').src = data.profilePic || '/img/default.jpg';
-    userInfoContainer.innerHTML = `<strong>Username: ${currentUser}</strong><br>Bio: ${currentUserBio}`;
-
-    if (!data.profileComplete) {
-      document.getElementById('profilePopup').classList.remove('hidden');
-    }
-
-    return data.username;
-  } catch {
-    window.location.href = '/index.html';
-  }
-}
-
-// Profile form
-const ageInput = document.getElementById('age');
-const profileError = document.getElementById('profileError');
-ageInput?.addEventListener('input', () => {
-  const ageValue = parseInt(ageInput.value);
-  profileError.textContent = ageValue && ageValue < 18 ? 'You must be 18 or older' : '';
-});
-
-document.getElementById('profileForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const age = parseInt(document.getElementById('age').value);
-  const bio = document.getElementById('bio').value.trim();
-  const pic = document.getElementById('profilePic').files[0];
-
-  if (isNaN(age) || age < 18) { profileError.textContent = 'You must be 18 or older'; return; }
-  if (!bio || bio.length > 35) { profileError.textContent = 'Bio must be 1–35 characters'; return; }
-
-  const formData = new FormData();
-  formData.append('age', age);
-  formData.append('bio', bio);
-  if (pic) formData.append('profilePic', pic);
-
-  const res = await fetch('/complete-profile', { method: 'POST', credentials: 'same-origin', body: formData });
-  if (res.ok) {
-    document.getElementById('profilePopup').classList.add('hidden');
-    loadPosts();
-
-    const meRes = await fetch('/me', { credentials: 'same-origin' });
-    const meData = await meRes.json();
-    document.getElementById('currentUserPic').src = meData.profilePic || '/img/default.jpg';
-    currentUserBio = meData.bio || '';
-    userInfoContainer.innerHTML = `<strong>Username: ${currentUser}</strong><br>Bio: ${currentUserBio}`;
-  } else {
-    profileError.textContent = 'Error saving profile';
-  }
-});
-
-// Edit profile
-const editBtn = document.getElementById('editProfileBtn');
-const editPopup = document.getElementById('editProfilePopup');
-const editForm = document.getElementById('editProfileForm');
-const editBioInput = document.getElementById('editBio');
-const editError = document.getElementById('editProfileError');
-
-editBtn.addEventListener('click', async () => {
-  const res = await fetch('/me', { credentials: 'same-origin' });
-  if (!res.ok) return;
-  const data = await res.json();
-  editBioInput.value = data.bio || '';
-  editPopup.classList.remove('hidden');
-});
-
-editForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  const bio = editBioInput.value.trim();
-  const pic = document.getElementById('editProfilePic').files[0];
-
-  if (!bio || bio.length > 35) { editError.textContent = 'Bio must be 1–35 characters'; return; }
-
-  const formData = new FormData();
-  formData.append('bio', bio);
-  if (pic) formData.append('profilePic', pic);
-
-  const res = await fetch('/edit-profile', { method: 'POST', credentials: 'same-origin', body: formData });
-  if (res.ok) {
-    editPopup.classList.add('hidden');
-    loadPosts();
-
-    const meRes = await fetch('/me', { credentials: 'same-origin' });
-    const meData = await meRes.json();
-    document.getElementById('currentUserPic').src = meData.profilePic || '/img/default.jpg';
-    currentUserBio = meData.bio || '';
-    userInfoContainer.innerHTML = `<strong>Username: ${currentUser}</strong><br>Bio: ${currentUserBio}`;
-  } else {
-    editError.textContent = 'Error saving profile';
-  }
-});
-
-// Notifications popup
-const notificationsBtn = document.getElementById('notificationsBtn');
-const notificationsPopup = document.getElementById('notificationsPopup');
-const notificationsForm = document.getElementById('notificationsForm');
-
-notificationsBtn.addEventListener('click', () => {
-  notificationsPopup.classList.remove('hidden');
-});
-
-notificationsForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  // Here you can handle saving notification preferences
-  notificationsPopup.classList.add('hidden');
-});
-
-// Posts
-async function loadPosts() {
-  const postsDiv = document.getElementById('posts');
-  postsDiv.innerHTML = '';
-
-  let url = '/posts';
-  if (window.currentFriend) {
-    url = `/dm?user=${encodeURIComponent(window.currentFriend)}`;
-    document.getElementById('postsHeader').textContent = `DM with ${window.currentFriend}`;
-  } else {
-    document.getElementById('postsHeader').textContent = 'Posts';
-  }
-
-  const res = await fetch(url, { credentials: 'same-origin' });
-  const data = await res.json();
-
-  data.forEach(p => {
-    const post = document.createElement('div');
-    if (window.currentFriend) {
-      post.className = `post dm ${p.username === currentUser ? 'dm-right' : 'dm-left'}`;
-    } else {
-      post.className = 'post public';
-    }
-
-    const profileImg = p.profilePic || '/img/default.jpg';
-    post.innerHTML = `
-      <div class="post-header">
-        <div style="display: flex; align-items: center;">
-          <img src="${profileImg}" class="profile-img">
-          <strong>${p.username}</strong>
-        </div>
-        ${
-          !window.currentFriend
-            ? `<button class="like-btn" data-id="${p.id}" style="border:none; background:none; cursor:pointer; font-size:1rem;">
-                ❤️ ${p.likes?.length || 0}
-              </button>`
-            : ''
-        }
-      </div>
-      <div class="post-content">${p.message || ''}</div>
-      ${p.image ? `<br><img src="${p.image}" class="post-img">` : ''}
-      ${
-        !window.currentFriend
-          ? `<div class="comments" id="comments-${p.id}">
-              ${(p.comments || []).map(c => `<p><b>${c.user}:</b> ${c.text}</p>`).join('')}
-              <input type="text" placeholder="Write a comment..." class="comment-input" data-id="${p.id}">
-            </div>`
-          : ''
-      }`;
-    postsDiv.appendChild(post);
-  });
-
-  if (!window.currentFriend) {
-    document.querySelectorAll('.like-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const postId = btn.dataset.id;
-        await fetch('/like', {
-          method: 'POST',
-          headers: { 'Content-Type':'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ postId })
-        });
-        loadPosts();
-      });
-    });
-
-    document.querySelectorAll('.comment-input').forEach(input => {
-      input.addEventListener('keypress', async e => {
-        if (e.key === 'Enter') {
-          const text = e.target.value.trim();
-          if (!text) return;
-          const postId = e.target.dataset.id;
-          await fetch('/comment', {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            credentials:'same-origin',
-            body:JSON.stringify({ postId, text })
-          });
-          e.target.value = '';
-          loadPosts();
-        }
-      });
-    });
-  }
-
-  postsDiv.scrollTop = postsDiv.scrollHeight;
-}
-
-document.getElementById('postForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const message = document.getElementById('postInput').value.trim();
-  const imageFile = document.getElementById('postImage').files[0];
-  if (!message && !imageFile) return;
-
-  const formData = new FormData();
-  formData.append('message', message);
-  if (imageFile) formData.append('image', imageFile);
-  if (window.currentFriend) formData.append('friend', window.currentFriend);
-
-  const endpoint = window.currentFriend ? '/dm' : '/posts';
-  await fetch(endpoint, { method:'POST', credentials:'same-origin', body: formData });
-  document.getElementById('postForm').reset();
-  loadPosts();
-});
-
-document.getElementById('homeBtn').addEventListener('click', () => {
-  window.currentFriend = null;
-  loadPosts();
-  document.getElementById('postsHeader').textContent = 'Posts';
-});
-
-(async function init() {
-  await getUsername();
-  loadPosts();
-  loadFriends();
-  setInterval(loadPosts, 10000);
-  setInterval(checkFriendRequests, 3000);
-})();
-</script>
-
+<script src="/content/home.js"></script>
 </body>
 </html>
 
