@@ -27,14 +27,28 @@ const usersFile = path.join(__dirname, 'users.json');
 const postsFile = path.join(__dirname, 'posts.json');
 const dmsFile = path.join(__dirname, 'dms.json');
 
+function ensureFile(file, initial) {
+  if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify(initial, null, 2));
+}
+
 function readJSON(file) {
-  if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify({}));
+  ensureFile(file, Array.isArray(initialPlaceholder(file)) ? [] : {});
   return JSON.parse(fs.readFileSync(file));
 }
 
 function writeJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
+
+function initialPlaceholder(file) {
+  if (file === postsFile) return [];
+  if (file === dmsFile) return [];
+  return {};
+}
+
+ensureFile(usersFile, {});
+ensureFile(postsFile, []);
+ensureFile(dmsFile, []);
 
 // ---------- Account & Auth ----------
 app.post('/create-account', async (req, res) => {
@@ -221,7 +235,7 @@ app.post('/edit-profile', upload.single('profilePic'), (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------- Posts / DMs / Likes / Comments ----------
+// ---------- Posts ----------
 app.get('/posts', (req, res) => {
   const posts = fs.existsSync(postsFile) ? JSON.parse(fs.readFileSync(postsFile)) : [];
   res.json(posts);
@@ -240,15 +254,174 @@ app.post('/posts', upload.single('image'), (req, res) => {
     image: req.file ? `/uploads/${req.file.filename}` : null,
     profilePic: users[username].profilePic || '/uploads/default.jpg',
     likes: [],
-    comments: []
+    comments: [],
+    createdAt: new Date().toISOString()
   };
   posts.push(newPost);
   writeJSON(postsFile, posts);
   res.sendStatus(200);
 });
 
-// ---------- Remaining routes (DMs, likes, comments, friends, search) ----------
-// Keep all your previous DM, like, comment, friend, and search routes as-is.
+app.post('/like', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const { postId } = req.body;
+  if (!postId) return res.status(400).json({ error: 'postId required' });
+  const posts = fs.existsSync(postsFile) ? JSON.parse(fs.readFileSync(postsFile)) : [];
+  const post = posts.find(p => p.id === postId);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  const idx = post.likes.indexOf(username);
+  if (idx === -1) post.likes.push(username);
+  else post.likes.splice(idx, 1);
+  writeJSON(postsFile, posts);
+  res.json({ ok: true, likes: post.likes.length });
+});
+
+app.post('/comment', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const { postId, text } = req.body;
+  if (!postId || !text) return res.status(400).json({ error: 'postId and text required' });
+  const posts = fs.existsSync(postsFile) ? JSON.parse(fs.readFileSync(postsFile)) : [];
+  const post = posts.find(p => p.id === postId);
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+  post.comments = post.comments || [];
+  post.comments.push({ user: username, text, createdAt: new Date().toISOString() });
+  writeJSON(postsFile, posts);
+  res.json({ ok: true, comments: post.comments });
+});
+
+// ---------- DMs ----------
+app.get('/dm', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const other = req.query.user;
+  if (!other) return res.status(400).json({ error: 'user query param required' });
+  const dms = fs.existsSync(dmsFile) ? JSON.parse(fs.readFileSync(dmsFile)) : [];
+  const convo = dms.filter(m =>
+    (m.from === username && m.to === other) || (m.from === other && m.to === username)
+  ).sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const users = readJSON(usersFile);
+  const enriched = convo.map(m => ({
+    username: m.from,
+    message: m.message,
+    createdAt: m.createdAt,
+    profilePic: users[m.from]?.profilePic || '/uploads/default.jpg'
+  }));
+  res.json(enriched);
+});
+
+app.post('/dm', upload.none(), (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const { friend, message } = req.body;
+  if (!friend || !message) return res.status(400).json({ error: 'friend and message required' });
+  const dms = fs.existsSync(dmsFile) ? JSON.parse(fs.readFileSync(dmsFile)) : [];
+  const users = readJSON(usersFile);
+  if (!users[friend]) return res.status(404).json({ error: 'Recipient not found' });
+  const newDM = {
+    id: Date.now().toString(),
+    from: username,
+    to: friend,
+    message,
+    createdAt: new Date().toISOString()
+  };
+  dms.push(newDM);
+  writeJSON(dmsFile, dms);
+  res.json({ ok: true });
+});
+
+// ---------- Friends & Friend Requests ----------
+app.get('/friends', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const users = readJSON(usersFile);
+  const me = users[username];
+  const list = (me.friends || []).map(f => {
+    const data = users[f] || {};
+    return { username: f, profilePic: data.profilePic || '/uploads/default.jpg' };
+  });
+  res.json({ friends: list });
+});
+
+app.post('/friend-request', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const { recipient } = req.body;
+  if (!recipient) return res.status(400).json({ error: 'recipient required' });
+  const users = readJSON(usersFile);
+  if (!users[recipient]) return res.status(404).json({ error: 'User not found' });
+  if (users[recipient].pendingRequests && users[recipient].pendingRequests.includes(username)) {
+    return res.status(409).json({ error: 'Request already sent' });
+  }
+  users[recipient].pendingRequests = users[recipient].pendingRequests || [];
+  users[recipient].pendingRequests.push(username);
+  writeJSON(usersFile, users);
+  res.json({ ok: true });
+});
+
+app.get('/friend-requests', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const users = readJSON(usersFile);
+  const me = users[username];
+  res.json({ requests: me.pendingRequests || [] });
+});
+
+app.post('/friend-request/respond', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const { from, accept } = req.body;
+  if (!from) return res.status(400).json({ error: 'from required' });
+  const users = readJSON(usersFile);
+  if (!users[from]) return res.status(404).json({ error: 'Sender not found' });
+  users[username].pendingRequests = (users[username].pendingRequests || []).filter(u => u !== from);
+  if (accept) {
+    users[username].friends = Array.from(new Set([...(users[username].friends || []), from]));
+    users[from].friends = Array.from(new Set([...(users[from].friends || []), username]));
+  }
+  writeJSON(usersFile, users);
+  res.json({ ok: true });
+});
+
+app.delete('/friends', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const { friend } = req.body;
+  if (!friend) return res.status(400).json({ error: 'friend required' });
+  const users = readJSON(usersFile);
+  if (!users[friend]) return res.status(404).json({ error: 'Friend not found' });
+  users[username].friends = (users[username].friends || []).filter(f => f !== friend);
+  users[friend].friends = (users[friend].friends || []).filter(f => f !== username);
+  writeJSON(usersFile, users);
+  res.json({ ok: true });
+});
+
+// ---------- Search ----------
+app.get('/search-users', (req, res) => {
+  const q = (req.query.query || '').trim().toLowerCase();
+  const users = readJSON(usersFile);
+  if (!q) return res.json({ users: [] });
+  const matches = Object.keys(users).filter(u => u.toLowerCase().includes(q));
+  res.json({ users: matches });
+});
+
+// ---------- Reset posts (clear once every 24h via client trigger) ----------
+app.post('/reset-posts', (req, res) => {
+  writeJSON(postsFile, []);
+  res.json({ ok: true });
+});
+
+// ---------- Utility: return full user list for Explore (optional) ----------
+app.get('/all-users', (req, res) => {
+  const users = readJSON(usersFile);
+  const list = Object.keys(users).map(u => ({
+    username: u,
+    profilePic: users[u].profilePic || '/uploads/default.jpg',
+    bio: users[u].bio || ''
+  }));
+  res.json(list);
+});
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
