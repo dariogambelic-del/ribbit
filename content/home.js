@@ -89,7 +89,7 @@ async function getUsername() {
     return data.username;
   } catch {
     currentUserStatus = 'offline 🔴';
-    window.location.href = '/content/home.html';
+    window.location.href = '/index.html';
   }
 }
 
