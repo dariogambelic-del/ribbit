@@ -7,6 +7,13 @@ let currentUserCreatedAt = null;
 let currentUserDOB = null;
 let currentUserLastLoggedIn = null;
 let currentUserStatus = 'online 🟢';
+let privacySettings = {
+  showAge: true,
+  showDOB: true,
+  showRelationship: true,
+  showLastLogin: true,
+  showStatus: true
+};
 
 const userInfoContainer = document.createElement('div');
 userInfoContainer.id = 'userInfoContainer';
@@ -41,20 +48,43 @@ async function getUsername() {
     currentUserBio = data.bio || '';
     currentUserAge = data.age || 'N/A';
     currentUserRelationship = data.relationshipStatus || 'Not specified';
-    currentUserCreatedAt = data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown';
+    if (data.createdAt) {
+      const created = new Date(data.createdAt);
+      const mm = String(created.getMonth() + 1).padStart(2, '0');
+      const dd = String(created.getDate()).padStart(2, '0');
+      const yyyy = created.getFullYear();
+      currentUserCreatedAt = `${mm}/${dd}/${yyyy}`;
+    } else {
+      currentUserCreatedAt = 'Unknown';
+    }
     currentUserDOB = data.dob ? data.dob.trim() : 'N/A';
     currentUserStatus = 'online 🟢';
     const today = new Date();
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    currentUserLastLoggedIn = today.toLocaleDateString('en-US', options);
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    currentUserLastLoggedIn = `${mm}/${dd}/${yyyy}`;
     document.getElementById('currentUserPic').src = data.profilePic || '/img/default.jpg';
+
+    // Fetch saved privacy settings from server
+    const privacyRes = await fetch('/privacy-settings', { credentials: 'same-origin' });
+    if (privacyRes.ok) {
+      const savedSettings = await privacyRes.json();
+      privacySettings = savedSettings;
+      for (let key in privacySettings) {
+        document.getElementById(key)?.checked !== undefined && (document.getElementById(key).checked = privacySettings[key]);
+      }
+    }
+
     updateUserInfoContainer();
+
     await fetch('/update-last-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
       body: JSON.stringify({ lastLoggedIn: currentUserLastLoggedIn })
     });
+
     if (!data.profileComplete) document.getElementById('profilePopup').classList.remove('hidden');
     return data.username;
   } catch {
@@ -65,14 +95,15 @@ async function getUsername() {
 
 function updateUserInfoContainer() {
   userInfoContent.innerHTML = `
+    <strong>Your Profile</strong><br>
     <strong>Username:</strong> ${currentUser}<br>
     <strong>Bio:</strong> ${currentUserBio}<br>
-    <strong>Age:</strong> ${currentUserAge} years old<br>
-    <strong>Date of Birth:</strong> ${currentUserDOB}<br>
-    <strong>Relationship Status:</strong> ${currentUserRelationship}<br>
+    ${privacySettings.showAge ? `<strong>Age:</strong> ${currentUserAge} years old<br>` : ''}
+    ${privacySettings.showDOB ? `<strong>Date of Birth:</strong> ${currentUserDOB}<br>` : ''}
+    ${privacySettings.showRelationship ? `<strong>Relationship Status:</strong> ${currentUserRelationship}<br>` : ''}
     <strong>Account Created:</strong> ${currentUserCreatedAt}<br>
-    <strong>Last Logged In:</strong> ${currentUserLastLoggedIn || 'Unknown'}<br>
-    <strong>Status:</strong> ${currentUserStatus}<br>
+    ${privacySettings.showLastLogin ? `<strong>Last Logged In:</strong> ${currentUserLastLoggedIn || 'Unknown'}<br>` : ''}
+    ${privacySettings.showStatus ? `<strong>Status:</strong> ${currentUserStatus}<br>` : ''}
   `;
 }
 
@@ -161,11 +192,39 @@ notificationsPopup.addEventListener('click', e => {
   if (e.target === notificationsPopup) notificationsPopup.classList.add('hidden');
 });
 
+const privacyBtn = document.getElementById('PrivacyBtn');
+const privacyPopup = document.getElementById('privacyPopup');
+privacyBtn.addEventListener('click', () => {
+  privacyPopup.classList.remove('hidden');
+});
+privacyPopup.addEventListener('click', e => {
+  if (e.target === privacyPopup) privacyPopup.classList.add('hidden');
+});
+
+const privacyForm = document.getElementById('privacyForm');
+privacyForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  privacySettings.showAge = document.getElementById('showAge').checked;
+  privacySettings.showDOB = document.getElementById('showDOB').checked;
+  privacySettings.showRelationship = document.getElementById('showRelationship').checked;
+  privacySettings.showLastLogin = document.getElementById('showLastLogin').checked;
+  privacySettings.showStatus = document.getElementById('showStatus').checked;
+  await fetch('/update-privacy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(privacySettings)
+  });
+  updateUserInfoContainer();
+  privacyPopup.classList.add('hidden');
+});
+
 const homeBtn = document.getElementById('homeBtn');
 homeBtn.addEventListener('click', () => {
   window.location.href = '/content/home.html';
 });
 
+// ----------------- Posts Handling -----------------
 async function loadPosts() {
   const postsDiv = document.getElementById('posts');
   postsDiv.innerHTML = '';
@@ -199,14 +258,27 @@ async function loadPosts() {
     if (friendRes.ok) {
       const data = await friendRes.json();
       userInfoContent.innerHTML = `
+        <strong>Friend's Profile</strong><br>
         <strong>Username:</strong> ${data.username || 'Unknown'}<br>
         <strong>Bio:</strong> ${data.bio || ''}<br>
-        <strong>Age:</strong> ${data.age || 'N/A'} years old<br>
-        <strong>Date of Birth:</strong> ${data.dob || 'N/A'}<br>
-        <strong>Relationship Status:</strong> ${data.relationshipStatus || 'Not specified'}<br>
-        <strong>Account Created:</strong> ${data.createdAt ? new Date(data.createdAt).toLocaleDateString() : 'Unknown'}<br>
-        <strong>Last Logged In:</strong> ${data.lastLoggedIn || 'Unknown'}<br>
-        <strong>Status:</strong> ${data.status || 'offline 🔴'}<br>
+        ${privacySettings.showAge ? `<strong>Age:</strong> ${data.age || 'N/A'} years old<br>` : ''}
+        ${privacySettings.showDOB ? `<strong>Date of Birth:</strong> ${data.dob || 'N/A'}<br>` : ''}
+        ${privacySettings.showRelationship ? `<strong>Relationship Status:</strong> ${data.relationshipStatus || 'Not specified'}<br>` : ''}
+        <strong>Account Created:</strong> ${data.createdAt ? (() => {
+            const created = new Date(data.createdAt);
+            const mm = String(created.getMonth() + 1).padStart(2, '0');
+            const dd = String(created.getDate()).padStart(2, '0');
+            const yyyy = created.getFullYear();
+            return `${mm}/${dd}/${yyyy}`;
+        })() : 'Unknown'}<br>
+        ${privacySettings.showLastLogin ? `<strong>Last Logged In:</strong> ${data.lastLoggedIn ? (() => {
+            const last = new Date(data.lastLoggedIn);
+            const mm = String(last.getMonth() + 1).padStart(2, '0');
+            const dd = String(last.getDate()).padStart(2, '0');
+            const yyyy = last.getFullYear();
+            return `${mm}/${dd}/${yyyy}`;
+        })() : 'Unknown'}<br>` : ''}
+        ${privacySettings.showStatus ? `<strong>Status:</strong> ${data.status || 'offline 🔴'}<br>` : ''}
       `;
     } else {
       userInfoContent.innerHTML = '<strong>Error loading user info</strong>';
@@ -218,7 +290,7 @@ async function loadPosts() {
     updateUserInfoContainer();
   }
 
-  if (!data.length) {
+  if (!data.length && !window.currentFriend) {
     const noPosts = document.createElement('div');
     noPosts.className = 'no-posts';
     noPosts.textContent = 'No posts today.';
@@ -228,6 +300,15 @@ async function loadPosts() {
       const post = document.createElement('div');
       post.className = window.currentFriend ? `post dm ${p.username === currentUser ? 'dm-right' : 'dm-left'}` : 'post public';
       const profileImg = p.profilePic || '/img/default.jpg';
+      const postDate = p.createdAt ? (() => {
+          const d = new Date(p.createdAt);
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          const yyyy = d.getFullYear();
+          const hh = String(d.getHours()).padStart(2, '0');
+          const min = String(d.getMinutes()).padStart(2, '0');
+          return `${mm}/${dd}/${yyyy} ${hh}:${min}`;
+      })() : '';
       post.innerHTML = `
         <div class="post-header">
           <div style="display: flex; align-items: center;">
@@ -239,6 +320,7 @@ async function loadPosts() {
         <div class="post-content">${p.message || ''}</div>
         ${p.image ? `<br><img src="${p.image}" class="post-img">` : ''}
         ${!window.currentFriend ? `<div class="comments" id="comments-${p.id}">${(p.comments || []).map(c => `<p><b>${c.user}:</b> ${c.text}</p>`).join('')}<input type="text" placeholder="Write a comment..." class="comment-input" data-id="${p.id}"></div>` : ''}
+        <div style="text-align: right; font-size: 0.65rem; color: gray; margin-top: 4px;">${postDate}</div>
       `;
       postsDiv.appendChild(post);
     });
@@ -265,6 +347,7 @@ async function loadPosts() {
       });
     });
   }
+
   postsDiv.scrollTop = postsDiv.scrollHeight;
 }
 
@@ -289,16 +372,18 @@ loadPosts();
 
 setInterval(() => {
   loadPosts();
-}, 5000);
+}, 8000);
 
 setInterval(() => {
-  const postsDiv = document.getElementById('posts');
-  postsDiv.innerHTML = '';
-  const postsHeader = document.getElementById('postsHeader');
-  postsHeader.textContent = 'Recent Posts (0)';
-  const noPosts = document.createElement('div');
-  noPosts.className = 'no-posts';
-  noPosts.textContent = 'No posts yet.';
-  postsDiv.appendChild(noPosts);
+  fetch('/reset-posts', { method: 'POST', credentials: 'same-origin' }).then(() => {
+    const postsDiv = document.getElementById('posts');
+    postsDiv.innerHTML = '';
+    const postsHeader = document.getElementById('postsHeader');
+    postsHeader.textContent = 'Recent Posts (0)';
+    const noPosts = document.createElement('div');
+    noPosts.className = 'no-posts';
+    noPosts.textContent = 'No posts yet.';
+    postsDiv.appendChild(noPosts);
+  });
 }, 24 * 60 * 60 * 1000);
 

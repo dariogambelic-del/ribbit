@@ -52,9 +52,12 @@ async function loadFriends() {
   const friendCount = document.getElementById('friendCount');
   friendCount.textContent = `(${data.friends.length})`;
 
+  const friendsMap = new Map();
+
   for (let f of data.friends) {
     const username = typeof f === 'string' ? f : f.username;
     const profilePic = f.profilePic && f.profilePic.trim() !== '' ? f.profilePic : '/img/default.jpg';
+    friendsMap.set(username, profilePic);
 
     const li = document.createElement('li');
     li.style.display = 'flex';
@@ -96,14 +99,11 @@ async function loadFriends() {
 
     friendInfo.addEventListener('click', async () => {
       window.currentFriend = username;
-
       const postsHeader = document.getElementById('postsHeader');
       postsHeader.textContent = `DM with ${username}`;
-
       unreadMessages.delete(username);
       const existingSquare = li.querySelector('.message-notif');
       if (existingSquare) existingSquare.remove();
-
       const existingBtn = document.querySelector('.friend-remove-btn');
       if (existingBtn) existingBtn.remove();
 
@@ -127,16 +127,115 @@ async function loadFriends() {
         if (typeof window.loadPosts === 'function') window.loadPosts();
         if (typeof window.updateUserInfoContainerWithData === 'function')
           window.updateUserInfoContainerWithData({});
+        const rightFarDiv = document.querySelector('.right-far');
+        if (rightFarDiv) rightFarDiv.innerHTML = '';
       });
 
       postsHeader.appendChild(removeBtn);
 
       if (typeof window.loadPosts === 'function') window.loadPosts();
-      updateUserInfo(username);
+      const res = await fetch(`/user/${username}`, { credentials: 'same-origin' });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      if (typeof window.updateUserInfoContainerWithData === 'function') {
+        window.updateUserInfoContainerWithData(data);
+      }
+
+      const rightFarDiv = document.querySelector('.right-far');
+      if (rightFarDiv) {
+        rightFarDiv.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = data.profilePic || '/img/default.jpg';
+        img.alt = username;
+        rightFarDiv.appendChild(img);
+      }
     });
 
     friendsList.appendChild(li);
   }
+
+  const groupLi = document.createElement('li');
+  groupLi.style.marginTop = '10px';
+  const createGroupBtn = document.createElement('button');
+  createGroupBtn.textContent = 'Create Group';
+  createGroupBtn.style.width = '100%';
+  createGroupBtn.style.backgroundColor = '#2ecc71';
+  createGroupBtn.style.color = 'white';
+  createGroupBtn.style.padding = '6px 0';
+  createGroupBtn.style.cursor = 'pointer';
+
+  createGroupBtn.addEventListener('click', () => {
+    const overlay = document.createElement('div');
+    overlay.className = 'popup';
+    overlay.innerHTML = `
+      <div class="popup-content" style="max-height: 60%; overflow-y: auto;">
+        <h3>Select Friends for Group</h3>
+        <div id="groupFriendList"></div>
+        <input type="text" id="groupName" placeholder="Group Name" style="width: 95%; margin-top: 5px;">
+        <button id="confirmGroup" style="background-color: #2ecc71; color:white; margin-top:5px;">Create Group</button>
+        <button id="cancelGroup" style="background-color: #e74c3c; color:white; margin-top:5px;">Cancel</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const groupFriendList = overlay.querySelector('#groupFriendList');
+
+    friendsMap.forEach((profilePic, username) => {
+      const div = document.createElement('div');
+      div.style.display = 'flex';
+      div.style.alignItems = 'center';
+      div.style.marginBottom = '4px';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = username;
+      checkbox.style.marginRight = '6px';
+      const img = document.createElement('img');
+      img.src = profilePic;
+      img.style.width = '20px';
+      img.style.height = '20px';
+      img.style.borderRadius = '50%';
+      img.style.marginRight = '4px';
+      const label = document.createElement('span');
+      label.textContent = username;
+      div.appendChild(checkbox);
+      div.appendChild(img);
+      div.appendChild(label);
+      groupFriendList.appendChild(div);
+    });
+
+    overlay.querySelector('#cancelGroup').addEventListener('click', () => overlay.remove());
+
+    overlay.querySelector('#confirmGroup').addEventListener('click', async () => {
+      const selectedFriends = Array.from(groupFriendList.querySelectorAll('input[type=checkbox]:checked')).map(cb => cb.value);
+      const groupName = overlay.querySelector('#groupName').value.trim();
+
+      let errorMsg = overlay.querySelector('.group-error');
+      if (!errorMsg) {
+        errorMsg = document.createElement('div');
+        errorMsg.className = 'group-error';
+        errorMsg.style.color = 'red';
+        errorMsg.style.marginTop = '5px';
+        overlay.querySelector('.popup-content').appendChild(errorMsg);
+      }
+
+      if (!groupName || selectedFriends.length === 0) {
+        errorMsg.textContent = 'Group must have a name and at least one friend.';
+        return;
+      }
+
+      await fetch('/create-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ groupName, members: selectedFriends })
+      });
+      overlay.remove();
+    });
+  });
+
+  groupLi.appendChild(createGroupBtn);
+  friendsList.appendChild(groupLi);
 }
 
 async function sendFriendRequest(username) {
@@ -248,6 +347,14 @@ async function updateUserInfo(username) {
   const data = await res.json();
   if (typeof window.updateUserInfoContainerWithData === 'function') {
     window.updateUserInfoContainerWithData(data);
+  }
+  const rightFarDiv = document.querySelector('.right-far');
+  if (rightFarDiv) {
+    rightFarDiv.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = data.profilePic || '/img/default.jpg';
+    img.alt = username;
+    rightFarDiv.appendChild(img);
   }
 }
 

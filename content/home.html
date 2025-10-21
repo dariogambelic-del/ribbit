@@ -92,19 +92,18 @@
   vertical-align: middle;
 }
 
-/* Post header */
 .post-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
+
 .post-label {
   font-size: 0.55rem;
   color: #27ae60;
   margin-bottom: 3px;
 }
 
-/* Right nav */
 .right p {
   cursor: pointer;
   text-decoration: underline;
@@ -180,7 +179,6 @@
     <p id="PrivacyBtn" style="font-size: 0.83rem;">Privacy</p>
   </div>
 
-
   <div class="right-far">
     <img id="currentUserPic" src="/img/default.jpg" />
   </div>
@@ -207,7 +205,6 @@
   </div>
 </div>
 
-<!-- Edit Profile Popup -->
 <div id="editProfilePopup" class="popup hidden">
   <div class="popup-content">
     <h2>Edit Profile</h2>
@@ -232,39 +229,40 @@
   </div>
 </div>
 
-<!-- Notifications Popup -->
 <div id="notificationsPopup" class="popup hidden">
   <div class="popup-content">
     <h2 style="text-decoration: underline;">Notification Settings</h2><br>
     <form id="notificationsForm">
-      <label>
-        <input type="checkbox" name="emailMessages">
-        Receive emails from Ribbit when you receive a message?
-      </label><br><br>
-
-      <label>
-        <input type="checkbox" name="likeNotifications">
-        Receive notifications when a user likes your post?
-      </label><br><br>
-
-      <label>
-        <input type="checkbox" name="friendPostNotifications">
-        Receive notifications when your friend uploads a post?
-      </label><br><br>
-
-      <label>
-        <input type="checkbox" name="commentNotifications">
-        Receive notifications when someone comments on your post?
-      </label><br><br>
-
+      <label><input type="checkbox" name="emailMessages"> Receive emails from Ribbit when you receive a message?</label><br><br>
+      <label><input type="checkbox" name="likeNotifications"> Receive notifications when a user likes your post?</label><br><br>
+      <label><input type="checkbox" name="friendPostNotifications"> Receive notifications when your friend uploads a post?</label><br><br>
+      <label><input type="checkbox" name="commentNotifications"> Receive notifications when someone comments on your post?</label><br><br>
       <button type="submit">Save Settings</button>
       <p id="notificationsError" class="error"></p>
     </form>
   </div>
 </div>
 
+<div id="privacyPopup" class="popup hidden">
+  <div class="popup-content">
+    <h2 style="text-decoration: underline;">Privacy Settings</h2><br>
+    <form id="privacyForm">
+      <label><input type="checkbox" id="showAge" checked> Show Age?</label><br><br>
+      <label><input type="checkbox" id="showDOB" checked> Show Date of Birth?</label><br><br>
+      <label><input type="checkbox" id="showRelationship" checked> Show Relationship Status?</label><br><br>
+      <label><input type="checkbox" id="showLastLogin" checked> Show Last Logged In?</label><br><br>
+      <label><input type="checkbox" id="showStatus" checked> Show Status?</label><br><br>
+      <button type="submit">Save Privacy Settings</button>
+    </form>
+  </div>
+</div>
+
 <script src="/content/friends.js"></script>
 <script src="/content/home.js"></script>
+<script>
+document.getElementById('homeBtn').addEventListener('click', () => { window.location.href = '/content/home.html'; });
+document.getElementById('exploreBtn').addEventListener('click', () => { window.location.href = '/content/explore.html'; });
+</script>
 </body>
 </html>
 
