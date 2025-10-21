@@ -1,1 +1,25 @@
-{}
+{
+  "dariogambelic_": {
+    "password": "$2b$10$pEciRIWNUpVROLB2ptJkT.8VTWQxmBb2cXa2veVv1XVhgH6R5tZNi",
+    "friends": [
+      "dariogambelic_"
+    ],
+    "pendingRequests": [],
+    "profileComplete": true,
+    "age": 19,
+    "dob": "09/11/2006",
+    "relationshipStatus": "",
+    "createdAt": "2025-10-21T03:23:14.293Z",
+    "bio": "test",
+    "profilePic": "/uploads/default.jpg",
+    "lastLoggedIn": "10/20/2025",
+    "isOnline": true,
+    "privacy": {
+      "showAge": true,
+      "showDOB": true,
+      "showRelationship": true,
+      "showLastLogin": true,
+      "showStatus": true
+    }
+  }
+}
