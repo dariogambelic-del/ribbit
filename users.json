@@ -44,5 +44,26 @@
       "showLastLogin": true,
       "showStatus": true
     }
+  },
+  "dariogambelic_": {
+    "password": "$2b$10$YTloSO6QHjRuxBkLMKBBvODUc.KRMqTWcuCy8tVAH0ISf6pxZ.ka.",
+    "friends": [],
+    "pendingRequests": [],
+    "profileComplete": true,
+    "age": "22",
+    "dob": "09/11/2003",
+    "relationshipStatus": "",
+    "createdAt": "2025-10-23T09:09:05.570Z",
+    "bio": "test",
+    "profilePic": "/uploads/default.jpg",
+    "lastLoggedIn": "10/23/2025",
+    "isOnline": true,
+    "privacy": {
+      "showAge": true,
+      "showDOB": true,
+      "showRelationship": true,
+      "showLastLogin": true,
+      "showStatus": true
+    }
   }
 }

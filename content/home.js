@@ -28,7 +28,7 @@ userInfoContainer.style.fontFamily = "'Silkscreen', sans-serif";
 userInfoContainer.style.fontSize = '0.85rem';
 userInfoContainer.style.wordWrap = 'break-word';
 userInfoContainer.style.color = 'green';
-userInfoContainer.style.height = '35vh';
+userInfoContainer.style.height = '35%';
 userInfoContainer.style.boxShadow = '0px 2px 5px rgba(0,0,0,0.2)';
 userInfoContainer.style.zIndex = '1';
 document.body.appendChild(userInfoContainer);

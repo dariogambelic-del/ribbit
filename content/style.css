@@ -121,19 +121,28 @@ html {
 }
 
 .middle {
-  flex: 1 1 auto;
+  flex: 1 1 0;            /* do not grow wider than parent */
+  max-width: 100%;         /* prevent horizontal expansion */
+  display: flex;
+  flex-direction: column;
   background-color: #f0fff0;
   border: 4px solid green;
   padding: 8px;
   box-sizing: border-box;
-  display: flex;
-  color: green;
-  flex-direction: column;
   min-height: 0;
-  position: relative;
+  overflow-x: hidden;      /* prevent horizontal scrolling */
+  overflow-y: auto;
+  word-break: break-word;  /* break very long words */
 }
 
-
+#posts {
+  flex: 1 1 0;
+  overflow-y: auto;
+  overflow-x: hidden;      /* no horizontal scroll */
+  word-break: break-word;
+  white-space: pre-wrap;   /* wrap long lines */
+  max-width: 100%;         /* never expand container */
+}
 
 .friend-remove-btn {
   color: green;
@@ -199,6 +208,13 @@ h2 {
   align-items: center;
   margin-top: 3px;
   font-size: 0.75rem;
+}
+
+.post-content {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .like-button {
