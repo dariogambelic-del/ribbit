@@ -514,7 +514,7 @@ footer {
 
 #userInfoContainer {
   position: fixed;
-  bottom: 41px;
+  bottom: calc(5% + 20px);   /* 47% is height of .right; add 20px gap */
   right: 20px; /* keeps 20px gap from screen edge */
   background-color: #f0fff0;
   border: 4px solid green;

@@ -18,7 +18,6 @@ let privacySettings = {
 const userInfoContainer = document.createElement('div');
 userInfoContainer.id = 'userInfoContainer';
 userInfoContainer.style.position = 'absolute';
-userInfoContainer.style.bottom = '40.5px';
 userInfoContainer.style.right = '20px';
 userInfoContainer.style.overflowY = 'auto';
 userInfoContainer.style.backgroundColor = '#f0fff0';
