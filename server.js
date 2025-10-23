@@ -44,7 +44,6 @@ ensureFile(usersFile, {});
 ensureFile(postsFile, []);
 ensureFile(dmsFile, []);
 
-// ---------- Account & Auth ----------
 app.post('/create-account', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
@@ -101,7 +100,6 @@ app.get('/logout', (req, res) => {
   res.redirect('/index.html');
 });
 
-// ---------- Friends ----------
 function ensureUserStructure(user) {
   if (!user.friends) user.friends = [];
   if (!user.pendingRequests) user.pendingRequests = [];
@@ -124,6 +122,18 @@ app.get('/friends', (req, res) => {
     return { username: f, profilePic: data.profilePic || '/uploads/default.jpg' };
   });
   res.json({ friends: list });
+});
+
+app.delete('/friends', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const users = readJSON(usersFile);
+  const friendToRemove = req.body.friend;
+  if (!friendToRemove || !users[friendToRemove]) return res.status(404).json({ error: 'Friend not found' });
+  users[username].friends = (users[username].friends || []).filter(f => f !== friendToRemove);
+  users[friendToRemove].friends = (users[friendToRemove].friends || []).filter(f => f !== username);
+  writeJSON(usersFile, users);
+  res.json({ ok: true });
 });
 
 app.post('/friend-request', (req, res) => {
@@ -162,7 +172,6 @@ app.post('/friend-request/respond', (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------- Posts ----------
 app.get('/posts', (req, res) => {
   res.json(readJSON(postsFile));
 });
@@ -211,7 +220,6 @@ app.post('/comment', (req, res) => {
   res.json({ ok: true, comments: post.comments });
 });
 
-// ---------- DMs ----------
 app.get('/dm', (req, res) => {
   const username = req.cookies.username;
   const other = req.query.user;
@@ -237,13 +245,119 @@ app.post('/dm', upload.none(), (req, res) => {
   res.json({ ok: true });
 });
 
-// ---------- Search ----------
 app.get('/search-users', (req, res) => {
   const q = (req.query.query || '').trim().toLowerCase();
   const users = readJSON(usersFile);
   if (!q) return res.json({ users: [] });
   const matches = Object.keys(users).filter(u => u.toLowerCase().includes(q));
   res.json({ users: matches });
+});
+
+app.get('/me', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const users = readJSON(usersFile);
+  const user = users[username];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({
+    username,
+    bio: user.bio || '',
+    age: user.age || null,
+    dob: user.dob || '',
+    relationshipStatus: user.relationshipStatus || '',
+    createdAt: user.createdAt,
+    profilePic: user.profilePic,
+    profileComplete: user.profileComplete || false,
+    lastLoggedIn: user.lastLoggedIn,
+    privacy: user.privacy
+  });
+});
+
+app.post('/complete-profile', upload.single('profilePic'), (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const users = readJSON(usersFile);
+  const user = users[username];
+  user.age = req.body.age;
+  user.dob = req.body.dob;
+  user.bio = req.body.bio;
+  user.profilePic = req.file ? `/uploads/${req.file.filename}` : user.profilePic;
+  user.profileComplete = true;
+  writeJSON(usersFile, users);
+  res.json({ success: true });
+});
+
+app.post('/edit-profile', upload.single('profilePic'), (req, res) => {
+  const username = req.cookies.username;
+  const users = readJSON(usersFile);
+  const user = users[username];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (req.body.bio) user.bio = req.body.bio;
+  if (req.body.relationshipStatus) user.relationshipStatus = req.body.relationshipStatus;
+  if (req.file) user.profilePic = `/uploads/${req.file.filename}`;
+  writeJSON(usersFile, users);
+  res.json({ success: true });
+});
+
+app.get('/privacy-settings', (req, res) => {
+  const username = req.cookies.username;
+  const users = readJSON(usersFile);
+  const user = users[username];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json(user.privacy || {
+    showAge: true,
+    showDOB: true,
+    showRelationship: true,
+    showLastLogin: true,
+    showStatus: true
+  });
+});
+
+app.post('/update-privacy', (req, res) => {
+  const username = req.cookies.username;
+  const users = readJSON(usersFile);
+  if (!users[username]) return res.status(404).json({ error: 'User not found' });
+  users[username].privacy = req.body;
+  writeJSON(usersFile, users);
+  res.json({ success: true });
+});
+
+app.post('/update-last-login', (req, res) => {
+  const username = req.cookies.username;
+  const users = readJSON(usersFile);
+  if (users[username]) {
+    users[username].lastLoggedIn = req.body.lastLoggedIn;
+    writeJSON(usersFile, users);
+  }
+  res.sendStatus(200);
+});
+
+app.post('/keep-online', (req, res) => {
+  const username = req.cookies.username;
+  const users = readJSON(usersFile);
+  if (users[username]) {
+    users[username].isOnline = true;
+    writeJSON(usersFile, users);
+  }
+  res.sendStatus(200);
+});
+
+app.get('/user/:username', (req, res) => {
+  const target = req.params.username;
+  const users = readJSON(usersFile);
+  const user = users[target];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({
+    username: target,
+    bio: user.bio || '',
+    age: user.age || null,
+    dob: user.dob || '',
+    relationshipStatus: user.relationshipStatus || '',
+    createdAt: user.createdAt,
+    profilePic: user.profilePic,
+    lastLoggedIn: user.lastLoggedIn,
+    status: user.isOnline ? 'online 🟢' : 'offline 🔴'
+  });
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

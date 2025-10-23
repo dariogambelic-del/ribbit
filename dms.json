@@ -1,9 +1,23 @@
 [
   {
-    "id": "1761017020404",
-    "from": "dariogambelic_",
-    "to": "dariogambelic_",
+    "id": "1761192348905",
+    "from": "nikkigam",
+    "to": "dariogambelic",
     "message": "yo",
-    "createdAt": "2025-10-21T03:23:40.404Z"
+    "createdAt": "2025-10-23T04:05:48.905Z"
+  },
+  {
+    "id": "1761192372279",
+    "from": "nikkigam",
+    "to": "dariogambelic",
+    "message": "yo dude",
+    "createdAt": "2025-10-23T04:06:12.279Z"
+  },
+  {
+    "id": "1761192449765",
+    "from": "dariogambelic",
+    "to": "nikkigam",
+    "message": "wsg",
+    "createdAt": "2025-10-23T04:07:29.765Z"
   }
 ]

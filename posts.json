@@ -1,12 +1,18 @@
 [
   {
-    "id": "1761017024647",
-    "username": "dariogambelic_",
+    "id": "1761192418718",
+    "username": "nikkigam",
     "message": "yo",
     "image": null,
     "profilePic": "/uploads/default.jpg",
     "likes": [],
-    "comments": [],
-    "createdAt": "2025-10-21T03:23:44.647Z"
+    "comments": [
+      {
+        "user": "dariogambelic",
+        "text": "test",
+        "createdAt": "2025-10-23T04:07:12.652Z"
+      }
+    ],
+    "createdAt": "2025-10-23T04:06:58.718Z"
   }
 ]

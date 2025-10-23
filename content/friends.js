@@ -97,7 +97,7 @@ async function loadFriends() {
     friendInfo.addEventListener('click', async () => {
       window.currentFriend = username;
       const postsHeader = document.getElementById('postsHeader');
-      postsHeader.textContent = `DM with ${username}`;
+      postsHeader.textContent = `MSG ${username}`;
       unreadMessages.delete(username);
       const existingSquare = li.querySelector('.message-notif');
       if (existingSquare) existingSquare.remove();
@@ -110,22 +110,9 @@ async function loadFriends() {
       removeBtn.style.marginLeft = '5px';
       removeBtn.style.fontSize = '0.6rem';
 
-      removeBtn.addEventListener('click', async e => {
+      removeBtn.addEventListener('click', e => {
         e.stopPropagation();
-        await fetch('/friends', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify({ friend: username })
-        });
-        window.currentFriend = null;
-        removeBtn.remove();
-        loadFriends();
-        if (typeof window.loadPosts === 'function') window.loadPosts();
-        if (typeof window.updateUserInfoContainerWithData === 'function')
-          window.updateUserInfoContainerWithData({});
-        const rightFarDiv = document.querySelector('.right-far');
-        if (rightFarDiv) rightFarDiv.innerHTML = '';
+        showRemoveFriendPopup(username);
       });
 
       postsHeader.appendChild(removeBtn);
@@ -151,6 +138,40 @@ async function loadFriends() {
 
     friendsList.appendChild(li);
   }
+}
+
+function showRemoveFriendPopup(username) {
+  const overlay = document.createElement('div');
+  overlay.className = 'popup';
+  overlay.innerHTML = `
+    <div class="popup-content" style="background-color: #fff0f0; border-color: #e74c3c;">
+      <p>Remove ${username} as a friend?</p>
+      <button id="confirmRemove" style="background-color: #e74c3c; color: white;">Yes</button>
+      <button id="cancelRemove" style="background-color: #95a5a6; color: white;">No</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#confirmRemove').addEventListener('click', async () => {
+    await fetch('/friends', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ friend: username })
+    });
+    overlay.remove();
+    window.currentFriend = null;
+    loadFriends();
+    if (typeof window.loadPosts === 'function') window.loadPosts();
+    if (typeof window.updateUserInfoContainerWithData === 'function')
+      window.updateUserInfoContainerWithData({});
+    const rightFarDiv = document.querySelector('.right-far');
+    if (rightFarDiv) rightFarDiv.innerHTML = '';
+  });
+
+  overlay.querySelector('#cancelRemove').addEventListener('click', () => {
+    overlay.remove();
+  });
 }
 
 async function sendFriendRequest(username) {
@@ -215,7 +236,7 @@ searchInput.addEventListener('input', async e => {
     li.style.alignItems = 'center';
     li.style.justifyContent = 'space-between';
     li.style.cursor = 'pointer';
-    li.style.padding = '4px 4px';
+    li.style.padding = '2px 2px';
 
     const friendInfo = document.createElement('div');
     friendInfo.style.display = 'flex';
