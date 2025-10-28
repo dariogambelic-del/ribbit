@@ -5,34 +5,144 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ribbit - Explore</title>
 <link rel="stylesheet" href="/content/explore.css">
+<style>
+  .nav-links {
+    display: flex;
+    gap: 20px;
+    font-size: 15px;
+    text-decoration: underline;
+    align-items: center;
+  }
+
+  .nav-links a {
+    text-decoration: none;
+    color: green;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+
+  .nav-links a:hover {
+    color: darkgreen;
+  }
+
+  .popup {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+  }
+  .popup.hidden { display: none; }
+  .popup-content {
+    background: #fff;
+    padding: 20px 30px;
+    font-family: 'Silkscreen', sans-serif;
+    width: 350px;
+    max-height: 80vh;
+    border: 4px solid green;
+    overflow-y: auto;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+  .popup-content h3, .popup-content h4 { margin-top: 0; color: green; }
+  .popup-content input {
+    display: block;
+    width: 100%;
+    font-family: 'Silkscreen', sans-serif;
+    margin: 5px 0 10px 0;
+    padding: 8px;
+  }
+  .popup-content button {
+    background-color: green;
+    color: white;
+    border: none;
+    font-family: 'Silkscreen', sans-serif;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .popup-content button:hover {
+    background-color: darkgreen;
+  }
+
+  #deleteAccountBtn {
+    background-color: red;
+    color: white;
+    border: none;
+    font-family: 'Silkscreen', sans-serif;
+    padding: 7px 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  #deleteAccountBtn:hover {
+    background-color: darkred;
+  }
+
+</style>
 </head>
 <body>
 
 <div class="top-box">
-  <p class="header">Ribbit - Explore the Community</p>
-  <a href="/logout">Logout</a>
+  <p class="header">Ribbit - Explore Page</p>
+  <div class="nav-links">
+    <a href="/content/home.html">Home</a>
+    <a href="/account">Account</a>
+    <a href="/logout">Logout</a>
+  </div>
+</div>
 </div>
 
 <div class="main-content">
-  <div class="left">
-    <h2>Friends <span id="friendCount">(0)</span></h2>
-    <input type="text" id="friendSearch" placeholder="Search users...">
-    <ul id="searchResults"></ul>
-    <ul id="friendsList"></ul>
+
+  <div class="right">
+    <div id="friendPreviews"></div>
   </div>
 
   <div class="middle">
-    <h2 id="postsHeader">Explore Posts</h2>
+    <div id="explorePostInputContainerWrapper"></div>
     <div id="posts" class="dm-container"></div>
   </div>
 
-  <div class="right">
-    <h2>Friend Previews</h2>
-    <div id="friendPreviews"></div>
+  <div class="left">
+    <div id="unspecified"></div>
   </div>
 </div>
 
 <footer>© 2025 Ribbit</footer>
+
+<!-- Account Popup -->
+<div id="accountPopup" class="popup hidden">
+  <div class="popup-content">
+    <h3>Account Settings</h3>
+
+    <section>
+      <h4>Change Password</h4>
+      <input type="password" id="oldPassword" placeholder="Current password">
+      <input type="password" id="newPassword" placeholder="New password">
+      <button id="changePasswordBtn">Update Password</button>
+      <p id="passwordStatus" style="font-size: 13px; color: green;"></p>
+    </section>
+
+    <hr>
+
+    <section>
+      <h4>Blocked Contacts</h4>
+      <ul id="blockedList">
+        <li>Loading...</li>
+      </ul>
+    </section>
+
+    <hr>
+
+    <button id="closeAccountPopup" style="margin-top:10px;">Close</button><br><br>
+
+    <section>
+      <button id="deleteAccountBtn" style="background-color:red;">Delete Account</button>
+      <p id="deleteStatus" style="font-size:13px; color:red;"></p>
+    </section>
+  </div>
+</div>
 
 <script src="/content/explore.js"></script>
 </body>

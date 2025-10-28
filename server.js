@@ -26,6 +26,7 @@ const upload = multer({ storage });
 const usersFile = path.join(__dirname, 'users.json');
 const postsFile = path.join(__dirname, 'posts.json');
 const dmsFile = path.join(__dirname, 'dms.json');
+const notificationsFile = path.join(__dirname, 'notifications.json');
 
 function ensureFile(file, initial) {
   if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify(initial, null, 2));
@@ -43,6 +44,21 @@ function writeJSON(file, data) {
 ensureFile(usersFile, {});
 ensureFile(postsFile, []);
 ensureFile(dmsFile, []);
+ensureFile(notificationsFile, {});
+
+function ensureUserStructure(user) {
+  if (!user.friends) user.friends = [];
+  if (!user.pendingRequests) user.pendingRequests = [];
+  if (!user.blocked) user.blocked = [];
+  if (!user.privacy) user.privacy = {
+    showAge: true,
+    showDOB: true,
+    showRelationship: true,
+    showLastLogin: true,
+    showStatus: true
+  };
+  return user;
+}
 
 app.post('/create-account', async (req, res) => {
   const { username, password } = req.body;
@@ -54,6 +70,7 @@ app.post('/create-account', async (req, res) => {
     password: hash,
     friends: [],
     pendingRequests: [],
+    blocked: [],
     profileComplete: false,
     age: null,
     dob: '',
@@ -100,27 +117,17 @@ app.get('/logout', (req, res) => {
   res.redirect('/index.html');
 });
 
-function ensureUserStructure(user) {
-  if (!user.friends) user.friends = [];
-  if (!user.pendingRequests) user.pendingRequests = [];
-  if (!user.privacy) user.privacy = {
-    showAge: true,
-    showDOB: true,
-    showRelationship: true,
-    showLastLogin: true,
-    showStatus: true
-  };
-  return user;
-}
-
 app.get('/friends', (req, res) => {
   const username = req.cookies.username;
   const users = readJSON(usersFile);
   const me = ensureUserStructure(users[username] || {});
-  const list = (me.friends || []).map(f => {
-    const data = ensureUserStructure(users[f] || {});
-    return { username: f, profilePic: data.profilePic || '/uploads/default.jpg' };
-  });
+  const blocked = me.blocked || [];
+  const list = (me.friends || [])
+    .filter(f => !blocked.includes(f))
+    .map(f => {
+      const data = ensureUserStructure(users[f] || {});
+      return { username: f, profilePic: data.profilePic || '/uploads/default.jpg' };
+    });
   res.json({ friends: list });
 });
 
@@ -172,8 +179,52 @@ app.post('/friend-request/respond', (req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/block', async (req, res) => {
+  try {
+    const { friend } = req.body;
+    const currentUser = req.session.username;
+    if (!currentUser || !friend) return res.status(400).json({ error: 'Missing data' });
+    const users = require('./users.json');
+    if (!users[currentUser].blocked) users[currentUser].blocked = [];
+    if (!users[currentUser].blocked.includes(friend)) {
+      users[currentUser].blocked.push(friend);
+    }
+    users[currentUser].friends = users[currentUser].friends.filter(f => f !== friend);
+    const fs = require('fs');
+    fs.writeFileSync('./users.json', JSON.stringify(users, null, 2));
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/account/blocked', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const users = readJSON(usersFile);
+  const user = users[username];
+  res.json(user?.blocked || []);
+});
+
+app.post('/account/unblock', (req, res) => {
+  const username = req.cookies.username;
+  const { user: blockedUser } = req.body;
+  if (!username || !blockedUser) return res.status(400).json({ error: 'Missing data' });
+  const users = readJSON(usersFile);
+  if (!users[username]) return res.status(404).json({ error: 'User not found' });
+  users[username].blocked = (users[username].blocked || []).filter(u => u !== blockedUser);
+  writeJSON(usersFile, users);
+  res.json({ ok: true });
+});
+
 app.get('/posts', (req, res) => {
-  res.json(readJSON(postsFile));
+  const username = req.cookies.username;
+  const users = readJSON(usersFile);
+  const blocked = users[username]?.blocked || [];
+  const allPosts = readJSON(postsFile);
+  const filteredPosts = allPosts.filter(p => !blocked.includes(p.username));
+  res.json(filteredPosts);
 });
 
 app.post('/posts', upload.single('image'), (req, res) => {
@@ -273,6 +324,24 @@ app.get('/me', (req, res) => {
   });
 });
 
+app.get('/user/:username', (req, res) => {
+  const target = req.params.username;
+  const users = readJSON(usersFile);
+  const user = users[target];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({
+    username: target,
+    bio: user.bio || '',
+    age: user.age || null,
+    dob: user.dob || '',
+    relationshipStatus: user.relationshipStatus || '',
+    createdAt: user.createdAt,
+    profilePic: user.profilePic,
+    lastLoggedIn: user.lastLoggedIn,
+    status: user.isOnline ? 'online 🟢' : 'offline 🔴'
+  });
+});
+
 app.post('/complete-profile', upload.single('profilePic'), (req, res) => {
   const username = req.cookies.username;
   if (!username) return res.status(401).json({ error: 'Not logged in' });
@@ -284,6 +353,25 @@ app.post('/complete-profile', upload.single('profilePic'), (req, res) => {
   user.profilePic = req.file ? `/uploads/${req.file.filename}` : user.profilePic;
   user.profileComplete = true;
   writeJSON(usersFile, users);
+  res.json({ success: true });
+});
+
+app.post('/account', async (req, res) => {
+  const { password } = req.body;
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const users = readJSON(usersFile);
+  const user = users[username];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) return res.status(400).json({ error: 'Incorrect password' });
+  delete users[username];
+  Object.keys(users).forEach(u => {
+    if (users[u].friends) users[u].friends = users[u].friends.filter(f => f !== username);
+    if (users[u].blocked) users[u].blocked = users[u].blocked.filter(b => b !== username);
+  });
+  writeJSON(usersFile, users);
+  res.clearCookie('username', { path: '/' });
   res.json({ success: true });
 });
 
@@ -322,43 +410,50 @@ app.post('/update-privacy', (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/update-last-login', (req, res) => {
-  const username = req.cookies.username;
+app.post('/notify', (req, res) => {
+  const sender = req.cookies.username;
+  const { friend } = req.body;
+  if (!sender || !friend) return res.status(400).json({ error: 'Missing data' });
   const users = readJSON(usersFile);
-  if (users[username]) {
-    users[username].lastLoggedIn = req.body.lastLoggedIn;
-    writeJSON(usersFile, users);
-  }
-  res.sendStatus(200);
-});
-
-app.post('/keep-online', (req, res) => {
-  const username = req.cookies.username;
-  const users = readJSON(usersFile);
-  if (users[username]) {
-    users[username].isOnline = true;
-    writeJSON(usersFile, users);
-  }
-  res.sendStatus(200);
-});
-
-app.get('/user/:username', (req, res) => {
-  const target = req.params.username;
-  const users = readJSON(usersFile);
-  const user = users[target];
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({
-    username: target,
-    bio: user.bio || '',
-    age: user.age || null,
-    dob: user.dob || '',
-    relationshipStatus: user.relationshipStatus || '',
-    createdAt: user.createdAt,
-    profilePic: user.profilePic,
-    lastLoggedIn: user.lastLoggedIn,
-    status: user.isOnline ? 'online 🟢' : 'offline 🔴'
+  if (!users[friend]) return res.status(404).json({ error: 'Friend not found' });
+  const notifications = readJSON(notificationsFile);
+  if (!notifications[friend]) notifications[friend] = [];
+  notifications[friend].push({
+    from: sender,
+    type: 'sound',
+    message: `${sender} sent you a notification`,
+    createdAt: new Date().toISOString()
   });
+  writeJSON(notificationsFile, notifications);
+  res.json({ ok: true });
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.get('/notifications', (req, res) => {
+  const username = req.cookies.username;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const notifications = readJSON(notificationsFile);
+  const userNotifications = notifications[username] || [];
+  notifications[username] = [];
+  writeJSON(notificationsFile, notifications);
+  res.json({ notifications: userNotifications });
+});
+
+app.post('/account/change-password', async (req, res) => {
+  const username = req.cookies.username;
+  const { currentPassword, newPassword } = req.body;
+  if (!username) return res.status(401).json({ error: 'Not logged in' });
+  const users = readJSON(usersFile);
+  const user = users[username];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (newPassword.toLowerCase() === username.toLowerCase()) {
+    return res.status(400).json({ error: "Password and username can't be the same" });
+  }
+  const match = await bcrypt.compare(currentPassword, user.password);
+  if (!match) return res.status(400).json({ error: 'Current password incorrect' });
+  user.password = await bcrypt.hash(newPassword, 10);
+  writeJSON(usersFile, users);
+  res.json({ success: true });
+});
+
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
 

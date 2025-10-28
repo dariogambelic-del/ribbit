@@ -28,7 +28,7 @@ userInfoContainer.style.fontFamily = "'Silkscreen', sans-serif";
 userInfoContainer.style.fontSize = '0.85rem';
 userInfoContainer.style.wordWrap = 'break-word';
 userInfoContainer.style.color = 'green';
-userInfoContainer.style.height = '35%';
+userInfoContainer.style.height = '35vh';
 userInfoContainer.style.boxShadow = '0px 2px 5px rgba(0,0,0,0.2)';
 userInfoContainer.style.zIndex = '1';
 document.body.appendChild(userInfoContainer);
@@ -193,6 +193,73 @@ privacyForm.addEventListener('submit', async e => {
 const homeBtn = document.getElementById('homeBtn');
 homeBtn.addEventListener('click', () => { window.location.href = '/content/home.html'; });
 
+function showBlockFriendPopup(friendUsername) {
+  let popup = document.getElementById('blockFriendPopup');
+  if (!popup) {
+    popup = document.createElement('div');
+    popup.id = 'blockFriendPopup';
+    popup.style.position = 'fixed';
+    popup.style.top = '0';
+    popup.style.right = '0';
+    popup.style.width = '100%';
+    popup.style.height = '100%';
+    popup.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    popup.style.display = 'flex';
+    popup.style.justifyContent = 'center';
+    popup.style.alignItems = 'center';
+    popup.style.zIndex = '2000';
+
+    const box = document.createElement('div');
+    box.style.backgroundColor = '#fff';
+    box.style.padding = '20px';
+    box.style.border = '4px solid green';
+    box.style.textAlign = 'center';
+    box.style.minWidth = '250px';
+
+    const text = document.createElement('p');
+    text.id = 'blockFriendText';
+    box.appendChild(text);
+
+    const btnYes = document.createElement('button');
+    btnYes.textContent = 'Yes';
+    btnYes.style.border = '2px';
+    btnYes.style.margin = '5px';
+    btnYes.style.padding = '5px 10px';
+    btnYes.style.cursor = 'pointer';
+
+    const btnNo = document.createElement('button');
+    btnNo.textContent = 'No';
+    btnNo.style.margin = '5px';
+    btnNo.style.padding = '5px 10px';
+    btnNo.style.cursor = 'pointer';
+    btnNo.style.backgroundColor = 'red';
+    btnNo.style.border = "1px solid red";
+
+    box.appendChild(btnYes);
+    box.appendChild(btnNo);
+    popup.appendChild(box);
+    document.body.appendChild(popup);
+
+    btnNo.addEventListener('click', () => { popup.style.display = 'none'; });
+    btnYes.addEventListener('click', async () => {
+      await fetch('/block', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        credentials: 'same-origin', 
+        body: JSON.stringify({ friend: friendUsername }) 
+      });
+      window.currentFriend = null;
+      popup.style.display = 'none';
+      loadPosts();
+      updateUserInfoContainer();
+      loadFriends?.();
+    });
+  }
+  document.getElementById('blockFriendText').textContent = `Block ${friendUsername}?`;
+  document.getElementById('blockFriendText').style.color = 'green';
+  popup.style.display = 'flex';
+}
+
 function showRemoveFriendPopup(friendUsername) {
   let popup = document.getElementById('removeFriendPopup');
   if (!popup) {
@@ -251,16 +318,70 @@ async function loadPosts() {
   const data = await res.json();
 
   if (window.currentFriend) {
-    postsHeader.textContent = `MSG ${window.currentFriend}`;
-    if (!postsHeader.querySelector('.friend-remove-btn')) {
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = 'Remove Friend';
-      removeBtn.className = 'friend-remove-btn';
-      removeBtn.style.fontSize = '0.7rem';
-      removeBtn.style.cursor = 'pointer';
-      removeBtn.addEventListener('click', () => { showRemoveFriendPopup(window.currentFriend); });
-      postsHeader.appendChild(removeBtn);
+    postsHeader.innerHTML = `<div>MSG <strong>${window.currentFriend}</strong></div>`;
+
+  if (!postsHeader.querySelector('.friend-remove-btn')) {
+    const btnContainer = document.createElement('div');
+    btnContainer.style.display = 'inline-flex';
+    btnContainer.style.gap = '0px'; 
+    btnContainer.style.marginTop = '6px';
+
+    const notifyBtn = document.createElement('button');
+    notifyBtn.textContent = 'Send Notification';
+    notifyBtn.className = 'friend-remove-btn'; // reuse styling
+    notifyBtn.style.display = 'inline-block';
+    notifyBtn.style.fontSize = '0.5rem';
+    notifyBtn.style.cursor = 'pointer';
+    notifyBtn.addEventListener('click', async () => {
+      if (!window.currentFriend) return;
+      const audio = new Audio('/content/sounds/sound.mp3');
+      audio.play().catch(err => console.warn('Audio play failed', err));
+      await fetch('/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ friend: window.currentFriend })
+      });
+    }); 
+
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = 'Remove Friend';
+    removeBtn.className = 'friend-remove-btn';
+    removeBtn.style.display = 'inline-block';
+    removeBtn.style.fontSize = '0.5rem';
+    removeBtn.style.cursor = 'pointer';
+    removeBtn.addEventListener('click', () => {
+      showRemoveFriendPopup(window.currentFriend);
+    });
+
+    const blockBtn = document.createElement('button');
+    blockBtn.textContent = 'Block User';
+    blockBtn.className = 'friend-remove-btn'; 
+    blockBtn.style.display = 'inline-block';
+    blockBtn.style.fontSize = '0.5rem';
+    blockBtn.style.cursor = 'pointer';
+    blockBtn.addEventListener('click', async () => {
+      if (!window.currentFriend) return;
+      await fetch('/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ friend: window.currentFriend })
+      });
+      showBlockFriendPopup(window.currentFriend);
+
+      window.currentFriend = null;
+      updateUserInfoContainer();
+      loadFriends?.();
+    });
+      btnContainer.appendChild(notifyBtn);
+      btnContainer.appendChild(removeBtn);
+      btnContainer.appendChild(blockBtn);
+
+      postsHeader.appendChild(btnContainer);
     }
+
+
     const friendRes = await fetch(`/user/${encodeURIComponent(window.currentFriend)}`, { credentials: 'same-origin' });
     if (friendRes.ok) {
       const u = await friendRes.json();
@@ -284,7 +405,7 @@ async function loadPosts() {
       post.className = window.currentFriend ? `post dm ${p.username === currentUser ? 'dm-right' : 'dm-left'}` : 'post public';
       const profileImg = p.profilePic || '/img/default.jpg';
       const postDate = p.createdAt ? (() => { const d = new Date(p.createdAt); return `${String(d.getMonth() + 1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; })() : '';
-      post.innerHTML = `<div class="post-header"><div style="display: flex; align-items: center;"><img src="${profileImg}" class="profile-img"><strong>${p.username}</strong></div>${!window.currentFriend ? `<button class="like-btn" data-id="${p.id}" style="border:none; background:none; cursor:pointer; font-size:1rem;">❤️ ${p.likes?.length || 0}</button>` : ''}</div><div class="post-content">${p.message || ''}</div>${p.image ? `<br><img src="${p.image}" class="post-img">` : ''}${!window.currentFriend ? `<div class="comments" id="comments-${p.id}">${(p.comments || []).map(c => `<p><b>${c.user}:</b> ${c.text}</p>`).join('')}<input type="text" placeholder="Write a comment..." class="comment-input" data-id="${p.id}"></div>` : ''}<div style="text-align: right; font-size: 0.65rem; color: gray; margin-top: 4px;">${postDate}</div>`;
+      post.innerHTML = `<div class="post-header"><div style="display: flex; align-items: center;"><img src="${profileImg}" class="profile-img"><strong>${p.username}</strong></div>${!window.currentFriend ? `<button class="like-btn" data-id="${p.id}" style="border:none; top: 0; background:none; cursor:pointer; font-size:0.8rem;">❤️ ${p.likes?.length || 0}</button>` : ''}</div><div class="post-content">${p.message || ''}</div>${p.image ? `<br><img src="${p.image}" class="post-img">` : ''}${!window.currentFriend ? `<div class="comments" id="comments-${p.id}">${(p.comments || []).map(c => `<p><b>${c.user}:</b> ${c.text}</p>`).join('')}<input type="text" placeholder="Write a comment..." class="comment-input" data-id="${p.id}"></div>` : ''}<div style="text-align: left; font-size: 0.65rem; color: gray; margin-top: 10px;">${postDate}</div>`;
       postsDiv.appendChild(post);
     });
   }

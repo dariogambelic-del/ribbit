@@ -84,15 +84,17 @@ async function loadFriends() {
     li.appendChild(friendInfo);
 
     if (unreadMessages.has(username)) {
-      const notifSquare = document.createElement('div');
-      notifSquare.className = 'message-notif';
-      notifSquare.style.width = '8px';
-      notifSquare.style.height = '8px';
-      notifSquare.style.backgroundColor = 'red';
-      notifSquare.style.borderRadius = '2px';
-      notifSquare.style.marginLeft = '6px';
-      li.appendChild(notifSquare);
+      const notifDot = document.createElement('div');
+      notifDot.className = 'message-notif';
+      notifDot.style.width = '8px';
+      notifDot.style.height = '8px';
+      notifDot.style.backgroundColor = 'red';
+      notifDot.style.borderRadius = '50%';
+      notifDot.style.marginLeft = '6px';
+      notifDot.style.flexShrink = '0';
+      friendInfo.appendChild(notifDot); // attach to friendInfo, not li
     }
+
 
     friendInfo.addEventListener('click', async () => {
       window.currentFriend = username;
@@ -103,19 +105,6 @@ async function loadFriends() {
       if (existingSquare) existingSquare.remove();
       const existingBtn = document.querySelector('.friend-remove-btn');
       if (existingBtn) existingBtn.remove();
-
-      const removeBtn = document.createElement('button');
-      removeBtn.textContent = 'Remove';
-      removeBtn.className = 'remove-btn friend-remove-btn';
-      removeBtn.style.marginLeft = '5px';
-      removeBtn.style.fontSize = '0.6rem';
-
-      removeBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        showRemoveFriendPopup(username);
-      });
-
-      postsHeader.appendChild(removeBtn);
 
       if (typeof window.loadPosts === 'function') window.loadPosts();
       const res = await fetch(`/user/${username}`, { credentials: 'same-origin' });

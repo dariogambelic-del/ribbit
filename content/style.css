@@ -25,7 +25,7 @@ body, html {
 }
 
 html {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .top-box {
@@ -147,18 +147,18 @@ html {
 .friend-remove-btn {
   color: green;
   background-color: #c0ffc0;
-  border: none;
-  font-size: 1.5rem;
-  position: absolute;
-  right: 8px;
-  top: 5;
   border: 2px solid green;
-  cursor: pointer;
+  font-size: 2rem;
+  position: static;
+  margin-right: 10px;
+  top: 0px;
+  cursor: pointer; 
 }
 
 
 h2 {
   font-size: 1rem;
+  color: green;
   margin-top: 0;
   margin-bottom: 10px;
   font-weight: 600;
@@ -178,7 +178,7 @@ h2 {
   margin-bottom: 10px;
   padding: 8px;
   text-align: left;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   word-wrap: break-word;
   overflow-wrap: break-word;
   background-color: #ffffff;
@@ -287,14 +287,14 @@ button:active,
   justify-content: center;
   padding: 2px 4px;
   font-size: 0.8rem;
-  background-color: #2ecc71;
+  background-color: #c0ffc0;
   user-select: none;
   border: 3px solid #145a32;
   box-shadow: 0 3px #145a32;
 }
 
 input#friendSearch {
-  width: 94%;
+  width: 35vh;
   padding: 5px;
   margin-bottom: 5px;
   border: 2px solid green;
@@ -317,6 +317,7 @@ input#friendSearch {
   padding: 2px;
   margin-bottom: 2px;
   background-color: #f0fff0;
+  width: 36vh;
   border: 2px solid green;
   cursor: pointer;
   font-size: 0.75rem;
@@ -523,9 +524,7 @@ footer {
   font-size: 0.85rem;
   word-wrap: break-word;
   color: green;
-  height: 35%;
   box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.2);
-  pointer-events: none;
   z-index: 1;
   width: calc(var(--right-width) + var(--right-far-width) - 7.5px); /* reduced to create 20px gap */
   transform: none; /* no need for translate now */
