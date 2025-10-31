@@ -33,15 +33,13 @@ async function loadPosts() {
     if (!res.ok) throw new Error('Failed to load posts.');
     const data = await res.json();
     const postsDiv = document.getElementById('posts');
-    const wrapper = document.getElementById('explorePostInputContainerWrapper');
     postsDiv.innerHTML = '';
-    if (!data.length) {
-      postsDiv.innerHTML = '';
-      return;
-    }
+    if (!data.length) return;
+
     const shouldUpdate = JSON.stringify(data) !== JSON.stringify(lastPostsData);
     if (!shouldUpdate) return;
     lastPostsData = data;
+
     data.forEach(p => {
       const post = document.createElement('div');
       post.className = 'post';
@@ -57,6 +55,7 @@ async function loadPosts() {
             )}:${String(d.getMinutes()).padStart(2, '0')}`;
           })()
         : '';
+
       post.innerHTML = `
         <div class="post-header" style="display:flex;justify-content:space-between;align-items:center;">
           <div style="display:flex;align-items:center;gap:8px;">
@@ -75,6 +74,8 @@ async function loadPosts() {
       `;
       postsDiv.prepend(post);
     });
+
+    // --- Like buttons ---
     document.querySelectorAll('.like-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const postId = btn.dataset.id;
@@ -87,27 +88,66 @@ async function loadPosts() {
         loadPosts();
       });
     });
+
+    // --- Comment inputs with 500-character limit and inline error ---
     document.querySelectorAll('.comment-input').forEach(input => {
+      // prevent duplicate error divs
+      if (!input.nextElementSibling || !input.nextElementSibling.classList.contains('comment-error')) {
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'comment-error';
+        errorMsg.style.color = 'red';
+        errorMsg.style.fontSize = '0.75rem';
+        errorMsg.style.minHeight = '1em';
+        input.parentNode.insertBefore(errorMsg, input.nextSibling);
+      }
+
+      const errorMsg = input.nextElementSibling;
+
+      input.maxLength = 500;
+
+      input.addEventListener('input', () => {
+        if (input.value.length > 500) {
+          errorMsg.textContent = '❌ Comment cannot exceed 500 characters.';
+        } else {
+          errorMsg.textContent = '';
+        }
+      });
+
       input.addEventListener('keypress', async e => {
         if (e.key === 'Enter') {
-          const text = e.target.value.trim();
+          e.preventDefault(); // prevent newline
+          const text = input.value.trim();
           if (!text) return;
-          const postId = e.target.dataset.id;
-          await fetch('/comment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'same-origin',
-            body: JSON.stringify({ postId, text })
-          });
-          e.target.value = '';
-          loadPosts();
+
+          if (text.length > 500) {
+            errorMsg.textContent = '❌ Comment cannot exceed 500 characters.';
+            return;
+          }
+
+          const postId = input.dataset.id;
+          try {
+            await fetch('/comment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ postId, text })
+            });
+            input.value = '';
+            errorMsg.textContent = '';
+            loadPosts();
+          } catch (err) {
+            console.error('Error posting comment:', err);
+            errorMsg.textContent = '❌ Failed to post comment.';
+          }
         }
       });
     });
+
   } catch (err) {
     console.error('Error loading posts:', err);
   }
 }
+
 
 
 
@@ -225,6 +265,7 @@ document.getElementById('deleteAccountBtn').addEventListener('click',async()=>{
 function createExplorePostInput() {
   const wrapper = document.getElementById('explorePostInputContainerWrapper');
   wrapper.innerHTML = '';
+
   const container = document.createElement('div');
   container.id = 'explorePostInputContainer';
   container.style.border = '2px solid green';
@@ -233,30 +274,59 @@ function createExplorePostInput() {
   container.style.backgroundColor = '#f9fff9';
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
-  container.style.gap = '6px';
+  container.style.gap = '2px';
+
+  // --- Textarea ---
   const textInput = document.createElement('textarea');
   textInput.id = 'explorePostText';
-  textInput.placeholder = 'Write a post ...';
-  textInput.rows = 7;
+  textInput.placeholder = 'Write a post ... (max 500 characters)';
+  textInput.rows = 5;
+  textInput.maxLength = 500;
   textInput.style.resize = 'none';
   textInput.style.width = '98%';
   textInput.style.padding = '6px';
   textInput.style.fontFamily = "'Fredoka', sans-serif";
   textInput.style.fontSize = '0.85rem';
+
+  // --- Character counter ---
+  const charCount = document.createElement('div');
+  charCount.textContent = '0 / 500';
+  charCount.style.fontSize = '0.8rem';
+  charCount.style.color = 'gray';
+  charCount.style.alignSelf = 'flex-end';
+
+  textInput.addEventListener('input', () => {
+    const len = textInput.value.length;
+    charCount.textContent = `${len} / 500`;
+    charCount.style.color = len > 480 ? 'red' : 'gray';
+    // Clear inline error when typing
+    errorMsg.textContent = '';
+  });
+
+  // --- Inline error message ---
+  const errorMsg = document.createElement('div');
+  errorMsg.style.color = 'red';
+  errorMsg.style.fontSize = '0.8rem';
+  errorMsg.style.minHeight = '1em'; // reserve space
+
+  // --- Upload area ---
   const inputContainer = document.createElement('div');
   inputContainer.style.display = 'flex';
   inputContainer.style.alignItems = 'center';
   inputContainer.style.gap = '6px';
+
   const imageInputLabel = document.createElement('label');
   imageInputLabel.textContent = '📷';
   imageInputLabel.style.cursor = 'pointer';
   imageInputLabel.style.fontSize = '1.3rem';
+
   const imageInput = document.createElement('input');
   imageInput.type = 'file';
   imageInput.id = 'explorePostImage';
   imageInput.accept = 'image/*';
   imageInput.style.display = 'none';
   imageInputLabel.appendChild(imageInput);
+
   const uploadBtn = document.createElement('button');
   uploadBtn.textContent = 'Upload';
   uploadBtn.style.backgroundColor = 'green';
@@ -265,28 +335,51 @@ function createExplorePostInput() {
   uploadBtn.style.border = 'none';
   uploadBtn.style.padding = '6px 12px';
   uploadBtn.style.cursor = 'pointer';
+
   uploadBtn.addEventListener('click', async () => {
-    const message = textInput.value.trim();
+    let message = textInput.value.trim();
     const imageFile = imageInput.files[0];
+
     if (!message && !imageFile) return;
+
+    // --- Strong 500-char enforcement ---
+    if (message.length > 500) {
+      errorMsg.textContent = '❌ Your post cannot exceed 500 characters.';
+      return;
+    }
+
     const formData = new FormData();
     formData.append('message', message);
     if (imageFile) formData.append('image', imageFile);
-    await fetch('/posts', {
-      method: 'POST',
-      credentials: 'same-origin',
-      body: formData
-    });
-    textInput.value = '';
-    imageInput.value = '';
-    loadPosts();
+
+    try {
+      await fetch('/posts', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: formData
+      });
+      textInput.value = '';
+      imageInput.value = '';
+      charCount.textContent = '0 / 500';
+      errorMsg.textContent = '';
+      loadPosts();
+    } catch (err) {
+      console.error(err);
+      errorMsg.textContent = '❌ Failed to upload post.';
+    }
   });
+
   inputContainer.appendChild(uploadBtn);
   inputContainer.appendChild(imageInputLabel);
+
   container.appendChild(textInput);
+  container.appendChild(charCount);
+  container.appendChild(errorMsg);
   container.appendChild(inputContainer);
+
   wrapper.appendChild(container);
 }
+
 
 loadFriends();
 loadPosts();
