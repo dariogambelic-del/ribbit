@@ -230,7 +230,7 @@ async function loadBlockedContacts(){
     if(!res.ok)throw new Error('Failed to load blocked list.');
     const blocked=await res.json();
     blockedList.innerHTML='';
-    if(!blocked.length){blockedList.innerHTML='<li>No blocked contacts.</li>';return;}
+    if(!blocked.length){blockedList.innerHTML='<li>N/A</li>';return;}
     blocked.forEach(user=>{
       const li=document.createElement('li');
       li.style.display='flex';

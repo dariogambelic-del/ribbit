@@ -1,1 +1,24 @@
-{}
+{
+  "dariogambelic": {
+    "password": "$2b$10$qQAJG55BZMOax3Q8HXalyOSpBn9xaHLkP7jqSeoyt6Cm3u1Wb4hOK",
+    "friends": [],
+    "pendingRequests": [],
+    "blocked": [],
+    "profileComplete": true,
+    "age": "19",
+    "dob": "09/11/2006",
+    "relationshipStatus": "",
+    "createdAt": "2025-10-31T08:10:04.017Z",
+    "bio": "just bipped right on the highway",
+    "profilePic": "/uploads/default.jpg",
+    "lastLoggedIn": "2025-10-31T08:24:13.405Z",
+    "isOnline": false,
+    "privacy": {
+      "showAge": true,
+      "showDOB": true,
+      "showRelationship": true,
+      "showLastLogin": true,
+      "showStatus": true
+    }
+  }
+}
