@@ -26,7 +26,13 @@
     "image": null,
     "profilePic": "/uploads/default.jpg",
     "likes": [],
-    "comments": [],
+    "comments": [
+      {
+        "user": "dariogambelic",
+        "text": "test",
+        "createdAt": "2025-10-31T03:13:28.985Z"
+      }
+    ],
     "createdAt": "2025-10-28T04:58:28.995Z"
   },
   {
